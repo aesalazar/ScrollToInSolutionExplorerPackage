@@ -36,7 +36,11 @@
          group as the part of a menu contained between two lines. The parent of a group
          must be a menu. -->
     <Groups>
-      <Group guid="guidScrollToInSolutionExplorerPackageCmdSet" id="MyMenuGroup" priority="0x0600">
+      <Group
+		  guid="guidScrollToInSolutionExplorerPackageCmdSet" 
+		  id="ScrollToInSolutionExplorerMenuGroup" 
+		  priority="0x0600"
+		  >
         <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS"/>
       </Group>
     </Groups>
@@ -52,8 +56,16 @@
               <CommandFlag>DefaultInvisible</CommandFlag>
               <CommandFlag>DynamicVisibility</CommandFlag>
           If you do not want an image next to your command, remove the Icon node /> -->
-      <Button guid="guidScrollToInSolutionExplorerPackageCmdSet" id="ScrollToInSolutionExplorerCommandId" priority="0x0100" type="Button">
-        <Parent guid="guidScrollToInSolutionExplorerPackageCmdSet" id="MyMenuGroup" />
+      <Button 
+		  guid="guidScrollToInSolutionExplorerPackageCmdSet" 
+		  id="ScrollToInSolutionExplorerCommandId" 
+		  priority="0x0100" 
+		  type="Button"
+		  >
+        <Parent
+			guid="guidScrollToInSolutionExplorerPackageCmdSet" 
+			id="ScrollToInSolutionExplorerMenuGroup" 
+		/>
         <Icon guid="guidImages" id="bmpPic1" />
         <Strings>
           <ButtonText>Scroll To In Solution Explorer</ButtonText>
@@ -68,21 +80,34 @@
             bitmap strip containing the bitmaps and then there are the numeric ids of the elements used
             inside a button definition. An important aspect of this declaration is that the element id
             must be the actual index (1-based) of the bitmap inside the bitmap strip. -->
-      <Bitmap guid="guidImages" href="Resources\ScrollToInSolutionExplorerCommand.png" usedList="bmpPic1, bmpPic2, bmpPicSearch, bmpPicX, bmpPicArrows, bmpPicStrikethrough"/>
+      <Bitmap 
+		  guid="guidImages" 
+		  href="Resources\ScrollToInSolutionExplorerCommand.png" 
+		  usedList="bmpPic1, bmpPic2, bmpPicSearch, bmpPicX, bmpPicArrows, bmpPicStrikethrough"
+		/>
     </Bitmaps>
   </Commands>
 
   <Symbols>
     <!-- This is the package guid. -->
-    <GuidSymbol name="guidScrollToInSolutionExplorerPackage" value="{ba7408f0-ed7d-4efa-85ef-2d648b9a3274}" />
+    <GuidSymbol
+		name="guidScrollToInSolutionExplorerPackage" 
+		value="{ba7408f0-ed7d-4efa-85ef-2d648b9a3274}" 
+	/>
 
     <!-- This is the guid used to group the menu commands together -->
-    <GuidSymbol name="guidScrollToInSolutionExplorerPackageCmdSet" value="{d41f8793-ad72-4ed1-af0f-cec3de2b9a61}">
-      <IDSymbol name="MyMenuGroup" value="0x1020" />
+    <GuidSymbol 
+		name="guidScrollToInSolutionExplorerPackageCmdSet" 
+		value="{d41f8793-ad72-4ed1-af0f-cec3de2b9a61}"
+		>
+      <IDSymbol name="ScrollToInSolutionExplorerMenuGroup" value="0x1020" />
       <IDSymbol name="ScrollToInSolutionExplorerCommandId" value="0x0100" />
     </GuidSymbol>
 
-    <GuidSymbol name="guidImages" value="{3ef7db1b-bdbc-4232-9d89-9f8a8503e7e3}" >
+    <GuidSymbol
+		name="guidImages" 
+		value="{3ef7db1b-bdbc-4232-9d89-9f8a8503e7e3}" 
+		>
       <IDSymbol name="bmpPic1" value="1" />
       <IDSymbol name="bmpPic2" value="2" />
       <IDSymbol name="bmpPicSearch" value="3" />

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel.Design;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Community.VisualStudio.Toolkit;
 using Microsoft.VisualStudio.Shell;
@@ -77,6 +78,11 @@ namespace ScrollToInSolutionExplorer
             Instance = new ScrollToInSolutionExplorerCommand(package, commandService);
         }
 
+        private void Execute(object sender, EventArgs e)
+        {
+            _ = Task.Run(() => ExecuteAsync(sender, e));
+        }
+
         /// <summary>
         /// This function is the callback used to execute the command when the menu item is clicked.
         /// See the constructor to see how the menu item is associated with this function using
@@ -84,30 +90,48 @@ namespace ScrollToInSolutionExplorer
         /// </summary>
         /// <param name="sender">Event sender.</param>
         /// <param name="e">Event args.</param>
-        private async void Execute(object sender, EventArgs e)
+        private async Task ExecuteAsync(object sender, EventArgs e)
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            //string message = string.Format(CultureInfo.CurrentCulture, "Inside {0}.MenuItemCallback()", this.GetType().FullName);
-            //string title = "ScrollToInSolutionExplorerCommand";
 
-            //// Show a message box to prove we were here
-            //VsShellUtilities.ShowMessageBox(
-            //    this.package,
-            //    message,
-            //    title,
-            //    OLEMSGICON.OLEMSGICON_INFO,
-            //    OLEMSGBUTTON.OLEMSGBUTTON_OK,
-            //    OLEMSGDEFBUTTON.OLEMSGDEFBUTTON_FIRST);
-
-            var solutionExplorer = await VS.Windows.GetSolutionExplorerWindowAsync();
-            var seletions = await solutionExplorer.GetSelectionAsync();
-            SolutionExplorerHelpers.TraverseChildren(
-                seletions
-                , selection => Debug.WriteLine($"AVAILABLE DOCUMENT: {selection.Type}: {selection.Name}")
-            );
-
+            //Look for a match by path
             var documentView = await VS.Documents.GetActiveDocumentViewAsync();
-            Debug.WriteLine($"CURRENT DOCUMENT:  {documentView?.FilePath}");
+            var path = documentView?.FilePath;
+            Debug.WriteLine($"CURRENT DOCUMENT:  {path}");
+            if (string.IsNullOrEmpty(path))
+                return;
+
+            //Look for the root node
+            var solutionExplorer = await VS.Windows.GetSolutionExplorerWindowAsync();
+            var selections = await solutionExplorer.GetSelectionAsync();
+            if (!selections.Any())
+                return;
+
+            var rootNode = selections.First();
+            while (rootNode.Parent != null)
+            {
+                rootNode = rootNode.Parent;
+            }
+
+            //Find a match
+            var match = default(SolutionItem);
+            SolutionExplorerHelpers.TraverseChildren(
+                rootNode
+                , solutionItem =>
+                {
+                    Debug.WriteLine($"AVAILABLE DOCUMENT: {solutionItem.Type}: {solutionItem.Name}");
+                    if (solutionItem.FullPath != path)
+                        return false;
+
+                    match = solutionItem;
+                    return true;
+                });
+
+            if (match == default)
+                return;
+
+            solutionExplorer.SetSelection(match);
+            Debug.WriteLine($"Selected file in Solution Explorer: {path}");
         }
     }
 }

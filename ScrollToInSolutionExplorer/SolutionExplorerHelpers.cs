@@ -7,30 +7,32 @@ namespace ScrollToInSolutionExplorer
 {
     public static class SolutionExplorerHelpers
     {
-        public static void TraverseChildren(this IEnumerable<SolutionItem> solutionItems, Action<SolutionItem> filterAction)
+        /// <summary>
+        /// Perfoms traveral on a root node of a parent-children <see cref="SolutionItem"/>.
+        /// </summary>
+        /// <param name="rootSolutionItem">Base solution item to traverse inclusively.</param>
+        /// <param name="solutionItemNodeVistor">Prediate action to run on each node; return false to break out of the traveral.</param>
+        public static void TraverseChildren(SolutionItem rootSolutionItem, Predicate<SolutionItem> solutionItemNodeVistor)
         {
-            foreach (var solutionItem in solutionItems)
+            //Prep the queue
+            var queue = new Queue<SolutionItem>();
+            queue.Enqueue(rootSolutionItem);
+
+            while (queue.Any())
             {
-                //Prep the queue
-                var queue = new Queue<SolutionItem>();
-                queue.Enqueue(solutionItem);
+                //Get the next parent to act on the children
+                var parent = queue.Dequeue();
+                if (!solutionItemNodeVistor(parent))
+                    break;
 
-                while (queue.Any())
+                //Breakout, parent has already had action applied (except top node)
+                if (parent.Children == null)
+                    continue;
+
+                //Apply action to each child and push onto the stack
+                foreach (var child in parent.Children.Where(child => child != null))
                 {
-                    //Get the next parent to act on the children
-                    var parent = queue.Dequeue();
-                    filterAction(parent);
-
-                    //Breakout, parent has already had action applied (except top node)
-                    if (parent.Children == null)
-                        continue;
-
-                    //Apply action to each child and push onto the stack
-                    foreach (var child in parent.Children)
-                    {
-                        //filterAction(child);
-                        queue.Enqueue(child);
-                    }
+                    queue.Enqueue(child);
                 }
             }
         }
