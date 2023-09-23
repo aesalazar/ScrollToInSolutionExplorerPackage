@@ -60,7 +60,7 @@ namespace ScrollToInSolutionExplorer
         {
             get
             {
-                return this.package;
+                return package;
             }
         }
 
@@ -68,13 +68,14 @@ namespace ScrollToInSolutionExplorer
         /// Initializes the singleton instance of the command.
         /// </summary>
         /// <param name="package">Owner package, not null.</param>
+        /// <remarks>
+        /// Call to AddCommand in ScrollToInSolutionExplorerCommand's constructor requires the UI thread.
+        /// </remarks>
         public static async Task InitializeAsync(AsyncPackage package)
         {
-            // Switch to the main thread - the call to AddCommand in ScrollToInSolutionExplorerCommand's constructor requires
-            // the UI thread.
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
 
-            OleMenuCommandService commandService = await package.GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
+            var commandService = await package.GetServiceAsync(typeof(IMenuCommandService)) as OleMenuCommandService;
             Instance = new ScrollToInSolutionExplorerCommand(package, commandService);
         }
 
@@ -120,7 +121,9 @@ namespace ScrollToInSolutionExplorer
                 , solutionItem =>
                 {
                     Debug.WriteLine($"AVAILABLE DOCUMENT: {solutionItem.Type}: {solutionItem.Name}");
-                    if (solutionItem.FullPath != path)
+                    if (solutionItem.Type == SolutionItemType.Unknown
+                        || solutionItem.Type == SolutionItemType.VirtualFolder
+                        || solutionItem.FullPath != path)
                         return true;
 
                     match = solutionItem;
