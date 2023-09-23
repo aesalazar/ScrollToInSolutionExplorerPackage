@@ -121,14 +121,17 @@ namespace ScrollToInSolutionExplorer
                 {
                     Debug.WriteLine($"AVAILABLE DOCUMENT: {solutionItem.Type}: {solutionItem.Name}");
                     if (solutionItem.FullPath != path)
-                        return false;
+                        return true;
 
                     match = solutionItem;
-                    return true;
+                    return false;
                 });
 
             if (match == default)
+            {
+                Debug.WriteLine($"Could not find file in Solution Explorer: {path}");
                 return;
+            }
 
             solutionExplorer.SetSelection(match);
             Debug.WriteLine($"Selected file in Solution Explorer: {path}");
