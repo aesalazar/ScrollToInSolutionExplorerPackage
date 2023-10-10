@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Community.VisualStudio.Toolkit;
@@ -30,9 +31,10 @@ namespace ScrollToInSolutionExplorer
                     continue;
 
                 //Apply action to each child and push onto the stack
-                foreach (var child in parent.Children.Where(child => child != null))
+                foreach (var child in parent.Children)
                 {
-                    queue.Enqueue(child);
+                    if (child != null)
+                        queue.Enqueue(child);
                 }
             }
         }

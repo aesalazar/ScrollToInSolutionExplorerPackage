@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.Linq;
@@ -34,7 +35,7 @@ namespace ScrollToInSolutionExplorer
         /// </summary>
         /// <param name="package">Owner package, not null.</param>
         /// <param name="commandService">Command service to add command to, not null.</param>
-        private ScrollToInSolutionExplorerCommand(AsyncPackage package, OleMenuCommandService commandService)
+        private ScrollToInSolutionExplorerCommand(AsyncPackage package, OleMenuCommandService? commandService)
         {
             this.package = package ?? throw new ArgumentNullException(nameof(package));
             commandService = commandService ?? throw new ArgumentNullException(nameof(commandService));
@@ -47,7 +48,7 @@ namespace ScrollToInSolutionExplorer
         /// <summary>
         /// Gets the instance of the command.
         /// </summary>
-        public static ScrollToInSolutionExplorerCommand Instance
+        public static ScrollToInSolutionExplorerCommand? Instance
         {
             get;
             private set;
@@ -56,13 +57,7 @@ namespace ScrollToInSolutionExplorer
         /// <summary>
         /// Gets the service provider from the owner package.
         /// </summary>
-        private IAsyncServiceProvider ServiceProvider
-        {
-            get
-            {
-                return package;
-            }
-        }
+        private IAsyncServiceProvider ServiceProvider => package;
 
         /// <summary>
         /// Initializes the singleton instance of the command.
@@ -104,6 +99,9 @@ namespace ScrollToInSolutionExplorer
 
             //Look for the root node
             var solutionExplorer = await VS.Windows.GetSolutionExplorerWindowAsync();
+            if (solutionExplorer == null)
+                return;
+
             var selections = await solutionExplorer.GetSelectionAsync();
             if (!selections.Any())
                 return;
