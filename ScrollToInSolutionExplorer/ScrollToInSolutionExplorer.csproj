@@ -51,7 +51,6 @@
   <ItemGroup>
     <Compile Include="ScrollToInSolutionExplorerCommand.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SolutionExplorerHelpers.cs" />
     <Compile Include="ScrollToInSolutionExplorerPackage.cs" />
     <Compile Include="ScrollToInSolutionExplorerPackage.vsct.cs">
       <AutoGen>True</AutoGen>
