@@ -57,6 +57,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>ScrollToInSolutionExplorerPackage.vsct</DependentUpon>
     </Compile>
+    <Compile Include="SolutionExplorerHelpers.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="source.extension.vsixmanifest">

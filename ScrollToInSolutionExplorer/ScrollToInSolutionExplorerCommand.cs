@@ -1,14 +1,12 @@
 ﻿#nullable enable
 using System;
-using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel.Design;
 using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
-using System.Threading;
+using System.IO;
 using System.Threading.Tasks;
-using Community.VisualStudio.Toolkit;
 using EnvDTE;
+using EnvDTE80;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
@@ -37,7 +35,7 @@ namespace ScrollToInSolutionExplorer
         public static async Task InitializeAsync(AsyncPackage package)
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
-            var applicationObject = (EnvDTE80.DTE2)await package.GetServiceAsync(typeof(_DTE));
+            var applicationObject = (DTE2)await package.GetServiceAsync(typeof(_DTE));
             var commandService = (OleMenuCommandService)await package.GetServiceAsync(typeof(IMenuCommandService));
             Instance = new ScrollToInSolutionExplorerCommand(commandService, applicationObject, package);
         }
@@ -54,7 +52,7 @@ namespace ScrollToInSolutionExplorer
         /// <param name="visualStudioInstance">Reference to the Visual Studio instance.</param>
         private ScrollToInSolutionExplorerCommand(
             OleMenuCommandService commandService,
-            EnvDTE80.DTE2 visualStudioInstance,
+            DTE2 visualStudioInstance,
             AsyncPackage package)
         {
             _visualStudioInstance = visualStudioInstance;
@@ -86,187 +84,59 @@ namespace ScrollToInSolutionExplorer
         /// <summary>
         /// Regisered Command
         /// </summary>
-        private OleMenuCommand _command;
+        private readonly OleMenuCommand _command;
 
         /// <summary>
         /// Reference to Visual Studio.
         /// </summary>
-        private EnvDTE80.DTE2 _visualStudioInstance;
+        private readonly DTE2 _visualStudioInstance;
 
+        /// <summary>
+        /// Reference to the contain extension package.
+        /// </summary>
         private readonly AsyncPackage _package;
 
         #endregion
 
         #region Methods
 
-        private static EnvDTE80.Window2? FindWindow(EnvDTE80.Windows2 windows, EnvDTE.vsWindowType vsWindowType)
-        {
-            return windows
-                .Cast<EnvDTE80.Window2>()
-                .FirstOrDefault(w => w.Type == vsWindowType);
-        }
-
-        #endregion
-
-        #region Command Handlers
-
         private void OnMenuCommandInvoke(object sender, EventArgs e)
         {
             _ = Task.Run(() => OnMenuCommandInvokeAsync(sender, e));
         }
 
-
-        private async Task SelectCurrentDocumentAsync()
+        /// <summary>
+        /// Determines if the command should enabled or not based on current active document.
+        /// </summary>
+        /// <remarks>
+        /// This cannot be async as the commands will not enable/disable in time in the UI.
+        /// </remarks>
+        private void OnMenuCommandBeforeQueryStatus(object _, EventArgs __)
         {
-            var docView = await VS.Documents.GetActiveDocumentViewAsync();
-
-            if (docView?.FilePath != null)
-            {
-                var item = await PhysicalFile.FromFileAsync(docView.FilePath);
-
-                // Find the Solution Explorer object
-                var windows = (EnvDTE80.Windows2)_visualStudioInstance.Windows;
-                var solutionExplorer = FindWindow(windows, vsWindowType.vsWindowTypeSolutionExplorer);
-                if (solutionExplorer != null)
-                {
-                    Debug.WriteLine($"INFO: SE Document = {solutionExplorer.Document?.Name}");
-                    solutionExplorer.Set()
-                }
-
-
-            }
-        }
-
-        private async Task<string?> SelectedItemFilePathAsync()
-        {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            var uiHeirarcy = _visualStudioInstance.ToolWindows.SolutionExplorer;
-
-            if (uiHeirarcy.SelectedItems is IEnumerable selectedItems)
-            {
-                foreach (UIHierarchyItem selItem in selectedItems)
-                {
-                    if (selItem.Object is ProjectItem projectItem)
-                    {
-                        Debug.WriteLine($"INFO: prjItem = {projectItem.Name}");
-                        var path = projectItem.Properties.Item("FullPath").Value.ToString(); ;
-                        var item = await PhysicalFile.FromFileAsync(path);
-                        Debug.WriteLine($"INFO: item = {item?.FullPath}");
-                    }
-                }
-
-                foreach (UIHierarchyItem selItem in selectedItems)
-                {
-                    if (selItem.Object is ProjectItem prjItem)
-                        return prjItem.Properties.Item("FullPath").Value.ToString();
-                }
-            }
-
-            return null;
-        }
-
-        private async Task<string?> GetSolutionFilterFilePathAsync()
-        {
-            Community.VisualStudio.Toolkit.Solution? solution;
-            solution = await VS.Solutions.GetCurrentSolutionAsync();
-
-            if (solution is not null)
-            {
-                solution.GetItemInfo(out IVsHierarchy hierarchy, out _, out _);
-                if (hierarchy.GetType().GetProperty("SolutionFilterFilePath") is PropertyInfo filePath)
-                {
-                    return filePath.GetValue(hierarchy) as string;
-                }
-            }
-
-            return null;
-        }
-
-        private async Task OnMenuCommandInvokeAsync(object sender, EventArgs e)
-        {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             try
             {
-                Debug.WriteLine($"INFO: SelectedItemFilePathAsync = {await SelectedItemFilePathAsync()}");
-
-                //Use the VS track file selection to actually select
-                var trackFileProperty = _visualStudioInstance
-                    .Properties["Environment", "ProjectsAndSolution"]
-                    .Item("TrackFileSelectionInExplorer");
-
-                //Activate if currently off
-                var isTrackingSelection = trackFileProperty.Value is true;
-                if (!isTrackingSelection)
-                {
-                    trackFileProperty.Value = true;
-                    await Task.Delay(500).ConfigureAwait(true); // YIKES!!!!
-                    trackFileProperty.DTE.MainWindow.Activate();
-                    Debug.WriteLine($"INFO: Track Value 1 = {trackFileProperty.Value}");
-                }
-
-                await Task.Factory.StartNew(async () =>
-                {
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-
-                    try
-                    {
-                        // Find the Solution Explorer object
-                        var windows = (EnvDTE80.Windows2)_visualStudioInstance.Windows;
-                        var solutionExplorer = FindWindow(windows, vsWindowType.vsWindowTypeSolutionExplorer);
-                        if (solutionExplorer != null)
-                        {
-                            Debug.WriteLine($"INFO: SE Document = {solutionExplorer.Document?.Name}");
-                            solutionExplorer.Activate();
-                        }
-                    }
-                    finally
-                    {
-                        //Restore the prior state if neccessary
-                        if (!isTrackingSelection)
-                            await ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-                            {
-                                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                                trackFileProperty.Value = false;
-                                Debug.WriteLine($"INFO: Track Value 2 = {trackFileProperty.Value}");
-                            });
-                    }
-                }, CancellationToken.None, TaskCreationOptions.RunContinuationsAsynchronously, TaskScheduler.Default);
-            }
-            catch (Exception ex)
-            {
-                if (ErrorHandler.IsCriticalException(ex))
-                    throw;
-            }
-        }
-
-        private void OnMenuCommandChange(object sender, EventArgs e)
-        {
-        }
-
-        private void OnMenuCommandBeforeQueryStatus(object sender, EventArgs e)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            try
-            {
-                var doc = _visualStudioInstance.ActiveDocument;
+                ThreadHelper.ThrowIfNotOnUIThread();
                 _command.Supported = true;
-
                 var isCommandEnabled = false;
-                var projectItem = doc?.ProjectItem;
-                if (projectItem != null)
+
+                //First check for regular project items
+                var projectItem = _visualStudioInstance.ActiveDocument?.ProjectItem;
+                if (projectItem is not null)
                 {
                     Debug.WriteLine($"INFO: Item = {projectItem.Name} - {projectItem.Kind}");
 
                     if (projectItem.Document != null)
-                    {
                         // normal project documents
                         isCommandEnabled = true;
-                    }
                     else if (projectItem.ContainingProject != null)
-                    {
                         // this applies to files in the "Solution Files" folder
                         isCommandEnabled = projectItem.ContainingProject.Object != null;
-                    }
+                }
+                else
+                {
+                    var caption = _visualStudioInstance.ActiveWindow.Caption;
+                    if (caption is not null)
+                        isCommandEnabled = true;
                 }
 
                 _command.Enabled = isCommandEnabled;
@@ -285,6 +155,37 @@ namespace ScrollToInSolutionExplorer
                 _command.Supported = false;
                 _command.Enabled = false;
             }
+        }
+
+        private void OnMenuCommandChange(object sender, EventArgs e)
+        {
+        }
+
+        private async Task OnMenuCommandInvokeAsync(object sender, EventArgs e)
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(_package.DisposalToken);
+            var activeDocument = _visualStudioInstance.ActiveDocument;
+            if(activeDocument is null)
+                return;
+
+            var fileName = activeDocument.Name;
+            Debug.WriteLine($"INFO: CURRENT DOCUMENT:  {fileName}");
+            if (fileName is null)
+                return;
+
+            //Get the VS soluton as its hierarchy
+            var vsSolutionHierarchy = await _package.GetServiceAsync(typeof(SVsSolution)) as IVsHierarchy;
+            if (vsSolutionHierarchy is null)
+                return;
+
+            var nodeNames = new List<string>();
+            await SolutionExplorerHelpers.FindItemInHierarchyAsync(
+                _package,
+                vsSolutionHierarchy,
+                Path.GetFileName(fileName)
+            );
+
+            Debug.WriteLine($"INFO: Node Path {string.Join("->", nodeNames)}");
         }
 
         #endregion
