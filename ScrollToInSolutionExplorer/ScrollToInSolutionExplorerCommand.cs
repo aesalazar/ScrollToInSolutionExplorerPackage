@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using EnvDTE;
 using EnvDTE80;
@@ -168,7 +169,7 @@ namespace ScrollToInSolutionExplorer
             if(activeDocument is null)
                 return;
 
-            var fileName = activeDocument.Name;
+            var fileName = activeDocument.FullName;
             Debug.WriteLine($"INFO: CURRENT DOCUMENT:  {fileName}");
             if (fileName is null)
                 return;
@@ -178,14 +179,28 @@ namespace ScrollToInSolutionExplorer
             if (vsSolutionHierarchy is null)
                 return;
 
-            var nodeNames = new List<string>();
-            await SolutionExplorerHelpers.FindItemInHierarchyAsync(
+            var nodeNames = await SolutionExplorerHelpers.FindItemInHierarchyAsync(
                 _package,
                 vsSolutionHierarchy,
-                Path.GetFileName(fileName)
+                fileName
             );
 
             Debug.WriteLine($"INFO: Node Path {string.Join("->", nodeNames)}");
+
+            var windows = (Windows2)_visualStudioInstance.Windows;
+            var solutionExplorer = FindWindow(windows, vsWindowType.vsWindowTypeSolutionExplorer);
+            if (solutionExplorer != null)
+            {
+                Debug.WriteLine($"INFO: SE Document = {solutionExplorer.Document?.Name}");
+                solutionExplorer.Activate();
+            }
+        }
+
+        private static EnvDTE80.Window2? FindWindow(EnvDTE80.Windows2 windows, EnvDTE.vsWindowType vsWindowType)
+        {
+            return windows
+                .Cast<EnvDTE80.Window2>()
+                .FirstOrDefault(w => w.Type == vsWindowType);
         }
 
         #endregion
