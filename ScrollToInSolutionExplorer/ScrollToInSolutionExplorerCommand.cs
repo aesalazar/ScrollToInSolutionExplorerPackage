@@ -1,16 +1,13 @@
 ﻿#nullable enable
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.Design;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using System;
+using System.ComponentModel.Design;
+using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace ScrollToInSolutionExplorer
 {
@@ -35,10 +32,16 @@ namespace ScrollToInSolutionExplorer
         /// </remarks>
         public static async Task InitializeAsync(AsyncPackage package)
         {
+            //Perform all async now so command can run synchronously
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
-            var applicationObject = (DTE2)await package.GetServiceAsync(typeof(_DTE));
             var commandService = (OleMenuCommandService)await package.GetServiceAsync(typeof(IMenuCommandService));
-            Instance = new ScrollToInSolutionExplorerCommand(commandService, applicationObject, package);
+            var applicationObject = (DTE2)await package.GetServiceAsync(typeof(_DTE));
+            var vsSolutionHierarchy = (IVsHierarchy)await package.GetServiceAsync(typeof(SVsSolution));
+
+            Instance = new ScrollToInSolutionExplorerCommand(
+                commandService,
+                applicationObject,
+                vsSolutionHierarchy);
         }
 
         #endregion
@@ -51,19 +54,20 @@ namespace ScrollToInSolutionExplorer
         /// </summary>
         /// <param name="commandService">Command service to add command to, not null.</param>
         /// <param name="visualStudioInstance">Reference to the Visual Studio instance.</param>
+        /// <param name="vsSolutionHierarchy">Reference to the Visual Stuio root hierarchy.</param>
         private ScrollToInSolutionExplorerCommand(
             OleMenuCommandService commandService,
             DTE2 visualStudioInstance,
-            AsyncPackage package)
+            IVsHierarchy vsSolutionHierarchy)
         {
             _visualStudioInstance = visualStudioInstance;
-            _package = package;
+            _vsSolutionHierarchy = vsSolutionHierarchy;
+
             _command = new OleMenuCommand(
                 OnMenuCommandInvoke,
-                OnMenuCommandChange,
+                null,
                 OnMenuCommandBeforeQueryStatus,
-                new CommandID(CommandSet, CommandId)
-            );
+                new CommandID(CommandSet, CommandId));
 
             commandService.AddCommand(_command);
         }
@@ -93,17 +97,46 @@ namespace ScrollToInSolutionExplorer
         private readonly DTE2 _visualStudioInstance;
 
         /// <summary>
-        /// Reference to the contain extension package.
+        /// Reference to the Visual Stuio root hierarchy.
         /// </summary>
-        private readonly AsyncPackage _package;
+        private readonly IVsHierarchy _vsSolutionHierarchy;
 
         #endregion
 
         #region Methods
 
+        /// <summary>
+        /// Attempts to locate the current active document in Solution Explorer and select it.
+        /// </summary>
+        /// <remarks>
+        /// Runnin as async causes selection to fire much more slowly.
+        /// </remarks>
         private void OnMenuCommandInvoke(object sender, EventArgs e)
         {
-            _ = Task.Run(() => OnMenuCommandInvokeAsync(sender, e));
+            try
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+                var activeDocument = _visualStudioInstance.ActiveDocument;
+                if (activeDocument is null)
+                    return;
+
+                var fileName = activeDocument.FullName;
+                Debug.WriteLine($"INFO: CURRENT DOCUMENT:  {fileName}");
+                if (fileName is null)
+                    return;
+
+                var nodeNames = SolutionExplorerHelpers.FindItemInHierarchy(
+                    _visualStudioInstance,
+                    _vsSolutionHierarchy,
+                    fileName);
+
+                Debug.WriteLine($"INFO: Node Path {string.Join("->", nodeNames)}");
+            }
+            catch (Exception ex)
+            {
+                if (ErrorHandler.IsCriticalException(ex))
+                    throw;
+            }
         }
 
         /// <summary>
@@ -144,7 +177,6 @@ namespace ScrollToInSolutionExplorer
             }
             catch (ArgumentException)
             {
-                // stupid thing throws if the active window is a C# project properties pane
                 _command.Supported = false;
                 _command.Enabled = false;
             }
@@ -156,51 +188,6 @@ namespace ScrollToInSolutionExplorer
                 _command.Supported = false;
                 _command.Enabled = false;
             }
-        }
-
-        private void OnMenuCommandChange(object sender, EventArgs e)
-        {
-        }
-
-        private async Task OnMenuCommandInvokeAsync(object sender, EventArgs e)
-        {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(_package.DisposalToken);
-            var activeDocument = _visualStudioInstance.ActiveDocument;
-            if(activeDocument is null)
-                return;
-
-            var fileName = activeDocument.FullName;
-            Debug.WriteLine($"INFO: CURRENT DOCUMENT:  {fileName}");
-            if (fileName is null)
-                return;
-
-            //Get the VS soluton as its hierarchy
-            var vsSolutionHierarchy = await _package.GetServiceAsync(typeof(SVsSolution)) as IVsHierarchy;
-            if (vsSolutionHierarchy is null)
-                return;
-
-            var nodeNames = await SolutionExplorerHelpers.FindItemInHierarchyAsync(
-                _package,
-                vsSolutionHierarchy,
-                fileName
-            );
-
-            Debug.WriteLine($"INFO: Node Path {string.Join("->", nodeNames)}");
-
-            var windows = (Windows2)_visualStudioInstance.Windows;
-            var solutionExplorer = FindWindow(windows, vsWindowType.vsWindowTypeSolutionExplorer);
-            if (solutionExplorer != null)
-            {
-                Debug.WriteLine($"INFO: SE Document = {solutionExplorer.Document?.Name}");
-                solutionExplorer.Activate();
-            }
-        }
-
-        private static EnvDTE80.Window2? FindWindow(EnvDTE80.Windows2 windows, EnvDTE.vsWindowType vsWindowType)
-        {
-            return windows
-                .Cast<EnvDTE80.Window2>()
-                .FirstOrDefault(w => w.Type == vsWindowType);
         }
 
         #endregion
