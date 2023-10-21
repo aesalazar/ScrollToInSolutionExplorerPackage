@@ -111,7 +111,7 @@ namespace ScrollToInSolutionExplorer
         /// <remarks>
         /// Runnin as async causes selection to fire much more slowly.
         /// </remarks>
-        private void OnMenuCommandInvoke(object sender, EventArgs e)
+        private void OnMenuCommandInvoke(object _, EventArgs __)
         {
             try
             {
@@ -125,7 +125,7 @@ namespace ScrollToInSolutionExplorer
                 if (fileName is null)
                     return;
 
-                var nodeNames = SolutionExplorerHelpers.FindItemInHierarchy(
+                var nodeNames = SolutionExplorerHelpers.SelectInSolutionExplorer(
                     _visualStudioInstance,
                     _vsSolutionHierarchy,
                     fileName);
