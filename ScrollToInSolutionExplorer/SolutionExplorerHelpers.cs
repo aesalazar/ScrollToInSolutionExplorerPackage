@@ -24,6 +24,25 @@ namespace ScrollToInSolutionExplorer
     public static class SolutionExplorerHelpers
     {
         /// <summary>
+        /// Selects the root node of Solution Explorer (typically the .sln file).
+        /// </summary>
+        /// <param name="visualStudioInstance">Reference to the Visual Studio Window object.</param>
+        /// <param name="hierarchy">Hierarchy Root.</param>
+        /// <returns>Tree path names, in order (generally, just one).</returns>
+        public static IList<string> SelectRootInSolutionExplorer(
+            DTE2 visualStudioInstance,
+            IVsHierarchy hierarchy)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            hierarchy.GetCanonicalName(VSConstants.VSITEMID_ROOT, out var cononicalName);
+            hierarchy.GetProperty(VSConstants.VSITEMID_ROOT, (int)VSID.VSHPROPID_Name, out var displayName);
+
+            var nodes = new[] { new HierarchyNodeData(cononicalName, (string?)displayName) };
+            SelectUIHItem(visualStudioInstance, nodes);
+            return nodes.Select(nd => nd.ToString()).ToList();
+        }
+
+        /// <summary>
         /// Searches for a named item in the Hierarcy and, if found, selects it.
         /// </summary>
         /// <param name="visualStudioInstance">Reference to the Visual Studio Window object.</param>

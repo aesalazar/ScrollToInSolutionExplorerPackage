@@ -7,6 +7,7 @@ using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.ComponentModel.Design;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace ScrollToInSolutionExplorer
@@ -39,6 +40,7 @@ namespace ScrollToInSolutionExplorer
             var vsSolutionHierarchy = (IVsHierarchy)await package.GetServiceAsync(typeof(SVsSolution));
 
             Instance = new ScrollToInSolutionExplorerCommand(
+                package.DisposalToken,
                 commandService,
                 applicationObject,
                 vsSolutionHierarchy);
@@ -56,10 +58,12 @@ namespace ScrollToInSolutionExplorer
         /// <param name="visualStudioInstance">Reference to the Visual Studio instance.</param>
         /// <param name="vsSolutionHierarchy">Reference to the Visual Stuio root hierarchy.</param>
         private ScrollToInSolutionExplorerCommand(
+            CancellationToken disposalToken,
             OleMenuCommandService commandService,
             DTE2 visualStudioInstance,
             IVsHierarchy vsSolutionHierarchy)
         {
+            _disposalToken = disposalToken;
             _visualStudioInstance = visualStudioInstance;
             _vsSolutionHierarchy = vsSolutionHierarchy;
 
@@ -92,6 +96,11 @@ namespace ScrollToInSolutionExplorer
         private readonly OleMenuCommand _command;
 
         /// <summary>
+        /// Package disposal token.
+        /// </summary>
+        private readonly CancellationToken _disposalToken;
+
+        /// <summary>
         /// Reference to Visual Studio.
         /// </summary>
         private readonly DTE2 _visualStudioInstance;
@@ -113,24 +122,35 @@ namespace ScrollToInSolutionExplorer
         /// </remarks>
         private void OnMenuCommandInvoke(object _, EventArgs __)
         {
+            if (!_command.Enabled)
+                return;
+
             try
             {
+                //Total hack - seems to have problem navigating to files at the bottom of the tree so go to the top first
                 ThreadHelper.ThrowIfNotOnUIThread();
-                var activeDocument = _visualStudioInstance.ActiveDocument;
-                if (activeDocument is null)
-                    return;
-
-                var fileName = activeDocument.FullName;
-                Debug.WriteLine($"INFO: CURRENT DOCUMENT:  {fileName}");
-                if (fileName is null)
-                    return;
-
-                var nodeNames = SolutionExplorerHelpers.SelectInSolutionExplorer(
-                    _visualStudioInstance,
-                    _vsSolutionHierarchy,
-                    fileName);
-
+                var nodeNames = SolutionExplorerHelpers.SelectRootInSolutionExplorer(_visualStudioInstance, _vsSolutionHierarchy);
                 Debug.WriteLine($"INFO: Node Path {string.Join("->", nodeNames)}");
+
+                _ = Task.Factory.StartNew(async () =>
+                {
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    var activeDocument = _visualStudioInstance.ActiveDocument;
+                    if (activeDocument is null)
+                        return;
+
+                    var fileName = activeDocument.FullName;
+                    Debug.WriteLine($"INFO: CURRENT DOCUMENT:  {fileName}");
+                    if (fileName is null)
+                        return;
+
+                    var nodeNames = SolutionExplorerHelpers.SelectInSolutionExplorer(
+                        _visualStudioInstance,
+                        _vsSolutionHierarchy,
+                        fileName);
+
+                    Debug.WriteLine($"INFO: Node Path {string.Join("->", nodeNames)}");
+                }, _disposalToken, TaskCreationOptions.None, TaskScheduler.Default);
             }
             catch (Exception ex)
             {
@@ -150,7 +170,6 @@ namespace ScrollToInSolutionExplorer
             try
             {
                 ThreadHelper.ThrowIfNotOnUIThread();
-                _command.Supported = true;
                 var isCommandEnabled = false;
 
                 //First check for regular project items
@@ -173,15 +192,18 @@ namespace ScrollToInSolutionExplorer
                         isCommandEnabled = true;
                 }
 
+                _command.Supported = isCommandEnabled;
                 _command.Enabled = isCommandEnabled;
             }
-            catch (ArgumentException)
+            catch (ArgumentException ex)
             {
+                Debug.WriteLine($"WARNING: Scroll To Item not supported: {ex.Message}");
                 _command.Supported = false;
                 _command.Enabled = false;
             }
             catch (Exception ex)
             {
+                Debug.WriteLine($"ERROR: Unexpected exception: {ex}");
                 if (ErrorHandler.IsCriticalException(ex))
                     throw;
 
