@@ -192,13 +192,11 @@ namespace ScrollToInSolutionExplorer
                         isCommandEnabled = true;
                 }
 
-                _command.Supported = isCommandEnabled;
                 _command.Enabled = isCommandEnabled;
             }
             catch (ArgumentException ex)
             {
                 Debug.WriteLine($"WARNING: Scroll To Item not supported: {ex.Message}");
-                _command.Supported = false;
                 _command.Enabled = false;
             }
             catch (Exception ex)
@@ -207,7 +205,6 @@ namespace ScrollToInSolutionExplorer
                 if (ErrorHandler.IsCriticalException(ex))
                     throw;
 
-                _command.Supported = false;
                 _command.Enabled = false;
             }
         }
