@@ -24,22 +24,19 @@ namespace ScrollToInSolutionExplorer
     public static class SolutionExplorerHelpers
     {
         /// <summary>
-        /// Selects the root node of Solution Explorer (typically the .sln file).
+        /// Searches the passed reference to Visual Studio for Solution Explore and sets focus on it.
         /// </summary>
         /// <param name="visualStudioInstance">Reference to the Visual Studio Window object.</param>
-        /// <param name="hierarchy">Hierarchy Root.</param>
-        /// <returns>Tree path names, in order (generally, just one).</returns>
-        public static IList<string> SelectRootInSolutionExplorer(
-            DTE2 visualStudioInstance,
-            IVsHierarchy hierarchy)
+        /// <exception cref="Exception">Thrown if the Solution Explorer window cannot be found in the passed reference.</exception>
+        public static void FocusSolutionExplorer(DTE2 visualStudioInstance)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            hierarchy.GetCanonicalName(VSConstants.VSITEMID_ROOT, out var cononicalName);
-            hierarchy.GetProperty(VSConstants.VSITEMID_ROOT, (int)VSID.VSHPROPID_Name, out var displayName);
+            var windows = (Windows2)visualStudioInstance.Windows;
+            var solutionExplorer = windows
+                .Cast<Window2>()
+                .FirstOrDefault(w => w.Type == vsWindowType.vsWindowTypeSolutionExplorer)
+                ?? throw new Exception("Could not locate Solution Explorer.");
 
-            var nodes = new[] { new HierarchyNodeData(cononicalName, (string?)displayName) };
-            SelectUIHItem(visualStudioInstance, nodes);
-            return nodes.Select(nd => nd.ToString()).ToList();
+            solutionExplorer.Activate();
         }
 
         /// <summary>
@@ -84,11 +81,11 @@ namespace ScrollToInSolutionExplorer
         private static void SelectUIHItem(DTE2 visualStudioInstance, IList<HierarchyNodeData> nodeData)
         {
             var items = visualStudioInstance.ToolWindows.SolutionExplorer.UIHierarchyItems;
-            foreach (var part in nodeData.Select(nd => nd.DisplayName))
+            foreach (var displayName in nodeData.Select(nd => nd.DisplayName))
             {
                 foreach (UIHierarchyItem item in items)
                 {
-                    if (item.Name == part)
+                    if (item.Name == displayName)
                     {
                         item.UIHierarchyItems.Expanded = true;
                         item.Select(vsUISelectionType.vsUISelectionTypeSelect);

@@ -6,7 +6,6 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.ComponentModel.Design;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -118,39 +117,26 @@ namespace ScrollToInSolutionExplorer
         /// Attempts to locate the current active document in Solution Explorer and select it.
         /// </summary>
         /// <remarks>
-        /// Runnin as async causes selection to fire much more slowly.
+        /// Running as async causes selection to fire much more slowly.
         /// </remarks>
         private void OnMenuCommandInvoke(object _, EventArgs __)
         {
-            if (!_command.Enabled)
-                return;
-
             try
             {
-                //Total hack - seems to have problem navigating to files at the bottom of the tree so go to the top first
                 ThreadHelper.ThrowIfNotOnUIThread();
-                var nodeNames = SolutionExplorerHelpers.SelectRootInSolutionExplorer(_visualStudioInstance, _vsSolutionHierarchy);
-                Debug.WriteLine($"INFO: Node Path {string.Join("->", nodeNames)}");
+                var activeDocument = _visualStudioInstance.ActiveDocument;
+                if (activeDocument is null || activeDocument.FullName is not string fileName)
+                    return;
 
-                _ = Task.Factory.StartNew(async () =>
-                {
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                    var activeDocument = _visualStudioInstance.ActiveDocument;
-                    if (activeDocument is null)
-                        return;
+                //Focus SE to ensure view pane scrolls to the selected file
+                SolutionExplorerHelpers.FocusSolutionExplorer(_visualStudioInstance);
+                var nodeNames = SolutionExplorerHelpers.SelectInSolutionExplorer(
+                    _visualStudioInstance,
+                    _vsSolutionHierarchy,
+                    fileName);
 
-                    var fileName = activeDocument.FullName;
-                    Debug.WriteLine($"INFO: CURRENT DOCUMENT:  {fileName}");
-                    if (fileName is null)
-                        return;
-
-                    var nodeNames = SolutionExplorerHelpers.SelectInSolutionExplorer(
-                        _visualStudioInstance,
-                        _vsSolutionHierarchy,
-                        fileName);
-
-                    Debug.WriteLine($"INFO: Node Path {string.Join("->", nodeNames)}");
-                }, _disposalToken, TaskCreationOptions.None, TaskScheduler.Default);
+                //Give focus back to the file tab
+                activeDocument.Activate();
             }
             catch (Exception ex)
             {
@@ -176,32 +162,28 @@ namespace ScrollToInSolutionExplorer
                 var projectItem = _visualStudioInstance.ActiveDocument?.ProjectItem;
                 if (projectItem is not null)
                 {
-                    Debug.WriteLine($"INFO: Item = {projectItem.Name} - {projectItem.Kind}");
-
-                    if (projectItem.Document != null)
+                    if (projectItem.Document is not null)
                         // normal project documents
                         isCommandEnabled = true;
-                    else if (projectItem.ContainingProject != null)
+
+                    else if (projectItem.ContainingProject is not null)
                         // this applies to files in the "Solution Files" folder
                         isCommandEnabled = projectItem.ContainingProject.Object != null;
                 }
-                else
+                else if (_visualStudioInstance.ActiveWindow?.Caption is not null)
                 {
-                    var caption = _visualStudioInstance.ActiveWindow.Caption;
-                    if (caption is not null)
-                        isCommandEnabled = true;
+                    isCommandEnabled = true;
                 }
 
                 _command.Enabled = isCommandEnabled;
             }
-            catch (ArgumentException ex)
+            catch (ArgumentException)
             {
-                Debug.WriteLine($"WARNING: Scroll To Item not supported: {ex.Message}");
+                //Unsupported file type, e.g. Project Properties tab
                 _command.Enabled = false;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"ERROR: Unexpected exception: {ex}");
                 if (ErrorHandler.IsCriticalException(ex))
                     throw;
 
