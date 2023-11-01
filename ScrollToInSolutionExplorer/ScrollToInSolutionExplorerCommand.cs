@@ -117,32 +117,35 @@ namespace ScrollToInSolutionExplorer
         /// Attempts to locate the current active document in Solution Explorer and select it.
         /// </summary>
         /// <remarks>
-        /// Running as async causes selection to fire much more slowly.
+        /// Seems more repliable when dispatched to a new task especially when mapped to a tool bar button.
         /// </remarks>
         private void OnMenuCommandInvoke(object _, EventArgs __)
         {
-            try
+            _ = Task.Factory.StartNew(async () =>
             {
-                ThreadHelper.ThrowIfNotOnUIThread();
-                var activeDocument = _visualStudioInstance.ActiveDocument;
-                if (activeDocument is null || activeDocument.FullName is not string fileName)
-                    return;
+                try
+                {
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(_disposalToken);
+                    var activeDocument = _visualStudioInstance.ActiveDocument;
+                    if (activeDocument is null || activeDocument.FullName is not string fileName)
+                        return;
 
-                //Focus SE to ensure view pane scrolls to the selected file
-                SolutionExplorerHelpers.FocusSolutionExplorer(_visualStudioInstance);
-                var nodeNames = SolutionExplorerHelpers.SelectInSolutionExplorer(
-                    _visualStudioInstance,
-                    _vsSolutionHierarchy,
-                    fileName);
+                    //Focus SE to ensure view pane scrolls to the selected file
+                    SolutionExplorerHelpers.FocusSolutionExplorer(_visualStudioInstance);
+                    var nodeNames = SolutionExplorerHelpers.SelectInSolutionExplorer(
+                        _visualStudioInstance,
+                        _vsSolutionHierarchy,
+                        fileName);
 
-                //Give focus back to the file tab
-                activeDocument.Activate();
-            }
-            catch (Exception ex)
-            {
-                if (ErrorHandler.IsCriticalException(ex))
-                    throw;
-            }
+                    //Give focus back to the file tab
+                    activeDocument.Activate();
+                }
+                catch (Exception ex)
+                {
+                    if (ErrorHandler.IsCriticalException(ex))
+                        throw;
+                }
+            }, _disposalToken, TaskCreationOptions.None, TaskScheduler.Default);
         }
 
         /// <summary>
