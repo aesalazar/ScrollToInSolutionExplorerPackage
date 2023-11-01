@@ -5,6 +5,9 @@
         <DisplayName>Scroll To In Solution Explorer</DisplayName>
         <Description xml:space="preserve">A simple tool to quickly scroll to and select the current docuent tab in Solution Explorer.</Description>
         <License>license.txt</License>
+        <Icon>Resources\ScrollToInSolutionExplorerCommand.ico</Icon>
+        <PreviewImage>Resources\ScrollToInSolutionExplorerCommand.ico</PreviewImage>
+        <Preview>true</Preview>
     </Metadata>
     <Installation>
         <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.0, 18.0)">
