@@ -81,13 +81,17 @@ namespace ScrollToInSolutionExplorer
         private static void SelectUIHItem(DTE2 visualStudioInstance, IList<HierarchyNodeData> nodeData)
         {
             var items = visualStudioInstance.ToolWindows.SolutionExplorer.UIHierarchyItems;
-            foreach (var displayName in nodeData.Select(nd => nd.DisplayName))
+            for (var i = 0; i < nodeData.Count; i++)
             {
+                var displayName = nodeData[i].DisplayName;
                 foreach (UIHierarchyItem item in items)
                 {
                     if (item.Name == displayName)
                     {
-                        item.UIHierarchyItems.Expanded = true;
+                        //Only expand if not on the final node
+                        if (i < nodeData.Count - 1)
+                            item.UIHierarchyItems.Expanded = true;
+
                         item.Select(vsUISelectionType.vsUISelectionTypeSelect);
                         items = item.UIHierarchyItems;
                         break;
