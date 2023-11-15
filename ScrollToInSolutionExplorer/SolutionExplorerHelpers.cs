@@ -6,6 +6,7 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -68,6 +69,22 @@ namespace ScrollToInSolutionExplorer
                 SelectUIHItem(visualStudioInstance, nodes);
 
             return nodes.Select(nd => nd.ToString()).ToList();
+        }
+
+        public static bool IsDisplayNameInHierarcy(
+            IVsHierarchy hierarchy,
+            string displayName)
+        {
+            if (displayName.Length == 0)
+                throw new ArgumentException("Display Name cannot be an empty string.", nameof(displayName));
+
+            ThreadHelper.ThrowIfNotOnUIThread();
+            return IsDisplayNamenHierarcy(
+                displayName,
+                hierarchy,
+                VSConstants.VSITEMID_ROOT,
+                0,
+                new List<HierarchyNodeData>());
         }
 
         #region Private Methods
@@ -154,6 +171,7 @@ namespace ScrollToInSolutionExplorer
                 currentHierarchy.GetCanonicalName(currentItemId, out var cononicalName);
                 currentHierarchy.GetProperty(currentItemId, (int)VSID.VSHPROPID_Name, out var displayName);
                 var nodeData = new HierarchyNodeData(cononicalName, (string)displayName);
+                Debug.WriteLine($"INFO: {nodeData}");
                 currentNodes.Add(nodeData);
 
                 //If we find match, terminate node enumerating
@@ -176,6 +194,77 @@ namespace ScrollToInSolutionExplorer
                     while (childId != VSConstants.VSITEMID_NIL)
                     {
                         var found = FindItemInHierarchy(targetNodeName, currentHierarchy, childId, currentLevel, currentNodes, ref foundNodes);
+                        if (found)
+                            return true;
+
+                        siblingId = isRootNode ? VSID.VSHPROPID_NextVisibleSibling : VSID.VSHPROPID_NextSibling;
+                        hResult = currentHierarchy.GetProperty(childId, (int)siblingId, out var pNextSiblingId);
+
+                        if (VSConstants.S_OK == hResult)
+                        {
+                            childId = GetItemId(pNextSiblingId);
+                        }
+                        else
+                        {
+                            ErrorHandler.ThrowOnFailure(hResult);
+                            break;
+                        }
+                    }
+                }
+
+                currentNodes.RemoveAt(currentNodes.Count - 1);
+            }
+
+            //node is not found in current hierarchy
+            return false;
+        }
+
+        [SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "Private method that can only be called from methods that have already verified access.")]
+        private static bool IsDisplayNamenHierarcy(
+            string targetDisplayName,
+            IVsHierarchy currentHierarchy,
+            uint currentItemId,
+            int currentLevel,
+            List<HierarchyNodeData> currentNodes)
+        {
+            var hierGuid = typeof(IVsHierarchy).GUID;
+            var hResult = currentHierarchy.GetNestedHierarchy(currentItemId, ref hierGuid, out var nestedHeirarchyPtr, out var nestedItemId);
+
+            //Non-zero pointer means there are child objects
+            if (hResult == VSConstants.S_OK && nestedHeirarchyPtr != IntPtr.Zero)
+            {
+                if (Marshal.GetObjectForIUnknown(nestedHeirarchyPtr) is IVsHierarchy nestedHierarchy &&
+                    IsDisplayNamenHierarcy(targetDisplayName, nestedHierarchy, nestedItemId, currentLevel, currentNodes))
+                    return true;
+            }
+            else
+            {
+                //Get the name of the root node in question here and push its name
+                currentHierarchy.GetCanonicalName(currentItemId, out var cononicalName);
+                currentHierarchy.GetProperty(currentItemId, (int)VSID.VSHPROPID_Name, out var displayName);
+                var nodeData = new HierarchyNodeData(cononicalName, (string)displayName);
+                Debug.WriteLine($"INFO: {nodeData}");
+                currentNodes.Add(nodeData);
+
+                //If we find match, terminate node enumerating
+                var lastNode = currentNodes.Last();
+                if (string.Equals(targetDisplayName, lastNode.DisplayName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+
+                var isRootNode = ++currentLevel == 1;
+                var siblingId = isRootNode ? VSID.VSHPROPID_FirstVisibleChild : VSID.VSHPROPID_FirstChild;
+                hResult = currentHierarchy.GetProperty(currentItemId, (int)siblingId, out var pFirstChildId);
+                ErrorHandler.ThrowOnFailure(hResult);
+
+                if (hResult == VSConstants.S_OK)
+                {
+                    //using Depth first search so at each level we recurse to check if the node has any children and then look for siblings.
+                    var childId = GetItemId(pFirstChildId);
+                    while (childId != VSConstants.VSITEMID_NIL)
+                    {
+                        var found = IsDisplayNamenHierarcy(targetDisplayName, currentHierarchy, childId, currentLevel, currentNodes);
                         if (found)
                             return true;
 

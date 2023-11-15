@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
-        <Identity Id="ScrollToInSolutionExplorer.31ac9553-84ba-47c0-a6bd-5762fb36e86b" Version="1.0" Language="en-US" Publisher="Ernie Salazar" />
+        <Identity Id="ScrollToInSolutionExplorer.31ac9553-84ba-47c0-a6bd-5762fb36e86b" Version="0.15" Language="en-US" Publisher="Ernie Salazar" />
         <DisplayName>Scroll To In Solution Explorer</DisplayName>
         <Description xml:space="preserve">A simple tool to quickly scroll to and select the current docuent tab in Solution Explorer.</Description>
         <License>license.txt</License>

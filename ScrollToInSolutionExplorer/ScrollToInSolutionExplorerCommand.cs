@@ -1,13 +1,14 @@
 ﻿#nullable enable
+using System;
+using System.ComponentModel.Design;
+using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
-using System;
-using System.ComponentModel.Design;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace ScrollToInSolutionExplorer
 {
@@ -126,19 +127,7 @@ namespace ScrollToInSolutionExplorer
                 try
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(_disposalToken);
-                    var activeDocument = _visualStudioInstance.ActiveDocument;
-                    if (activeDocument is null || activeDocument.FullName is not string fileName)
-                        return;
-
-                    //Focus SE to ensure view pane scrolls to the selected file
-                    SolutionExplorerHelpers.FocusSolutionExplorer(_visualStudioInstance);
-                    var nodeNames = SolutionExplorerHelpers.SelectInSolutionExplorer(
-                        _visualStudioInstance,
-                        _vsSolutionHierarchy,
-                        fileName);
-
-                    //Give focus back to the file tab
-                    activeDocument.Activate();
+                    _visualStudioInstance.DTE.ExecuteCommand("SolutionExplorer.SyncWithActiveDocument");
                 }
                 catch (Exception ex)
                 {
@@ -159,26 +148,12 @@ namespace ScrollToInSolutionExplorer
             try
             {
                 ThreadHelper.ThrowIfNotOnUIThread();
-                var isCommandEnabled = false;
+                _command.Enabled = SolutionExplorerHelpers.IsDisplayNameInHierarcy(
+                    _vsSolutionHierarchy
+                    , _visualStudioInstance.ActiveWindow.Caption
+                );
 
-                //First check for regular project items
-                var projectItem = _visualStudioInstance.ActiveDocument?.ProjectItem;
-                if (projectItem is not null)
-                {
-                    if (projectItem.Document is not null)
-                        // normal project documents
-                        isCommandEnabled = true;
-
-                    else if (projectItem.ContainingProject is not null)
-                        // this applies to files in the "Solution Files" folder
-                        isCommandEnabled = projectItem.ContainingProject.Object != null;
-                }
-                else if (_visualStudioInstance.ActiveWindow?.Caption is not null)
-                {
-                    isCommandEnabled = true;
-                }
-
-                _command.Enabled = isCommandEnabled;
+                Debug.WriteLine($"INFO: display name '{_visualStudioInstance.ActiveWindow.Caption}' present: {_command.Enabled}");
             }
             catch (ArgumentException)
             {
