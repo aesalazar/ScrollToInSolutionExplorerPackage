@@ -1,15 +1,13 @@
 ﻿#nullable enable
-using EnvDTE;
-using EnvDTE80;
-using Microsoft.VisualStudio;
-using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Microsoft.VisualStudio;
+using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using VSID = Microsoft.VisualStudio.Shell.Interop.__VSHPROPID;
 
 namespace ScrollToInSolutionExplorer
@@ -25,52 +23,11 @@ namespace ScrollToInSolutionExplorer
     public static class SolutionExplorerHelpers
     {
         /// <summary>
-        /// Searches the passed reference to Visual Studio for Solution Explore and sets focus on it.
+        /// Searches for a named item in the Hierarcy and returns an indication if found.
         /// </summary>
-        /// <param name="visualStudioInstance">Reference to the Visual Studio Window object.</param>
-        /// <exception cref="Exception">Thrown if the Solution Explorer window cannot be found in the passed reference.</exception>
-        public static void FocusSolutionExplorer(DTE2 visualStudioInstance)
-        {
-            var windows = (Windows2)visualStudioInstance.Windows;
-            var solutionExplorer = windows
-                .Cast<Window2>()
-                .FirstOrDefault(w => w.Type == vsWindowType.vsWindowTypeSolutionExplorer)
-                ?? throw new Exception("Could not locate Solution Explorer.");
-
-            solutionExplorer.Activate();
-        }
-
-        /// <summary>
-        /// Searches for a named item in the Hierarcy and, if found, selects it.
-        /// </summary>
-        /// <param name="visualStudioInstance">Reference to the Visual Studio Window object.</param>
         /// <param name="hierarchy">Hierarchy Root.</param>
-        /// <param name="nodeName">Item Name to find.</param>
+        /// <param name="displayName">Item Name to find.</param>
         /// <returns>Tree path names, in order.</returns>
-        public static IList<string> SelectInSolutionExplorer(
-            DTE2 visualStudioInstance,
-            IVsHierarchy hierarchy,
-            string nodeName)
-        {
-            if (nodeName.Length == 0)
-                throw new ArgumentException("Node Name cannot be an empty string.", nameof(nodeName));
-
-            ThreadHelper.ThrowIfNotOnUIThread();
-            var nodes = new List<HierarchyNodeData>();
-            var found = FindItemInHierarchy(
-                nodeName,
-                hierarchy,
-                VSConstants.VSITEMID_ROOT,
-                0,
-                new List<HierarchyNodeData>(),
-                ref nodes);
-
-            if (found)
-                SelectUIHItem(visualStudioInstance, nodes);
-
-            return nodes.Select(nd => nd.ToString()).ToList();
-        }
-
         public static bool IsDisplayNameInHierarcy(
             IVsHierarchy hierarchy,
             string displayName)
@@ -79,7 +36,7 @@ namespace ScrollToInSolutionExplorer
                 throw new ArgumentException("Display Name cannot be an empty string.", nameof(displayName));
 
             ThreadHelper.ThrowIfNotOnUIThread();
-            return IsDisplayNamenHierarcy(
+            return IsDisplayNameInHierarcy(
                 displayName,
                 hierarchy,
                 VSConstants.VSITEMID_ROOT,
@@ -88,34 +45,6 @@ namespace ScrollToInSolutionExplorer
         }
 
         #region Private Methods
-
-        /// <summary>
-        /// Traversed the passed named nodes, invoking expansion and selection.
-        /// </summary>
-        /// <param name="visualStudioInstance">Reference to the Visual Studio Window object.</param>
-        /// <param name="nodeData">Named nodes to search for when traversing.</param>
-        [SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "Private method that can only be called from methods that have already verified access.")]
-        private static void SelectUIHItem(DTE2 visualStudioInstance, IList<HierarchyNodeData> nodeData)
-        {
-            var items = visualStudioInstance.ToolWindows.SolutionExplorer.UIHierarchyItems;
-            for (var i = 0; i < nodeData.Count; i++)
-            {
-                var displayName = nodeData[i].DisplayName;
-                foreach (UIHierarchyItem item in items)
-                {
-                    if (item.Name == displayName)
-                    {
-                        //Only expand if not on the final node
-                        if (i < nodeData.Count - 1)
-                            item.UIHierarchyItems.Expanded = true;
-
-                        item.Select(vsUISelectionType.vsUISelectionTypeSelect);
-                        items = item.UIHierarchyItems;
-                        break;
-                    }
-                }
-            }
-        }
 
         /// <summary>
         /// Gets the item id.
@@ -136,91 +65,8 @@ namespace ScrollToInSolutionExplorer
             };
         }
 
-        /// <summary>
-        /// Depth-first recursive search of the hierarchy to find the path to the matching end node.
-        /// </summary>
-        /// <param name="targetNodeName">Name of the target node to find.</param>
-        /// <param name="currentHierarchy">Root heirarchy to search on and into.</param>
-        /// <param name="currentItemId">Id associated with <see cref="hierarchy"/> root.</param>
-        /// <param name="currentLevel">Current level or recursion.</param>
-        /// <param name="currentNodes">Collection of node names to populate.</param>
-        /// <param name="foundNodes">Colleciton of nodes to navigate to to get the the target node.</param>
-        /// <returns>Indicate of success.</returns>
         [SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "Private method that can only be called from methods that have already verified access.")]
-        private static bool FindItemInHierarchy(
-            string targetNodeName,
-            IVsHierarchy currentHierarchy,
-            uint currentItemId,
-            int currentLevel,
-            List<HierarchyNodeData> currentNodes,
-            ref List<HierarchyNodeData> foundNodes)
-        {
-            var hierGuid = typeof(IVsHierarchy).GUID;
-            var hResult = currentHierarchy.GetNestedHierarchy(currentItemId, ref hierGuid, out var nestedHeirarchyPtr, out var nestedItemId);
-
-            //Non-zero pointer means there are child objects
-            if (hResult == VSConstants.S_OK && nestedHeirarchyPtr != IntPtr.Zero)
-            {
-                if (Marshal.GetObjectForIUnknown(nestedHeirarchyPtr) is IVsHierarchy nestedHierarchy &&
-                    FindItemInHierarchy(targetNodeName, nestedHierarchy, nestedItemId, currentLevel, currentNodes, ref foundNodes))
-                    return true;
-            }
-            else
-            {
-                //Get the name of the root node in question here and push its name
-                currentHierarchy.GetCanonicalName(currentItemId, out var cononicalName);
-                currentHierarchy.GetProperty(currentItemId, (int)VSID.VSHPROPID_Name, out var displayName);
-                var nodeData = new HierarchyNodeData(cononicalName, (string)displayName);
-                Debug.WriteLine($"INFO: {nodeData}");
-                currentNodes.Add(nodeData);
-
-                //If we find match, terminate node enumerating
-                var lastNode = currentNodes.Last();
-                if (string.Equals(targetNodeName, lastNode.CononicalName, StringComparison.OrdinalIgnoreCase))
-                {
-                    foundNodes.AddRange(currentNodes);
-                    return true;
-                }
-
-                var isRootNode = ++currentLevel == 1;
-                var siblingId = isRootNode ? VSID.VSHPROPID_FirstVisibleChild : VSID.VSHPROPID_FirstChild;
-                hResult = currentHierarchy.GetProperty(currentItemId, (int)siblingId, out var pFirstChildId);
-                ErrorHandler.ThrowOnFailure(hResult);
-
-                if (hResult == VSConstants.S_OK)
-                {
-                    //using Depth first search so at each level we recurse to check if the node has any children and then look for siblings.
-                    var childId = GetItemId(pFirstChildId);
-                    while (childId != VSConstants.VSITEMID_NIL)
-                    {
-                        var found = FindItemInHierarchy(targetNodeName, currentHierarchy, childId, currentLevel, currentNodes, ref foundNodes);
-                        if (found)
-                            return true;
-
-                        siblingId = isRootNode ? VSID.VSHPROPID_NextVisibleSibling : VSID.VSHPROPID_NextSibling;
-                        hResult = currentHierarchy.GetProperty(childId, (int)siblingId, out var pNextSiblingId);
-
-                        if (VSConstants.S_OK == hResult)
-                        {
-                            childId = GetItemId(pNextSiblingId);
-                        }
-                        else
-                        {
-                            ErrorHandler.ThrowOnFailure(hResult);
-                            break;
-                        }
-                    }
-                }
-
-                currentNodes.RemoveAt(currentNodes.Count - 1);
-            }
-
-            //node is not found in current hierarchy
-            return false;
-        }
-
-        [SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "Private method that can only be called from methods that have already verified access.")]
-        private static bool IsDisplayNamenHierarcy(
+        private static bool IsDisplayNameInHierarcy(
             string targetDisplayName,
             IVsHierarchy currentHierarchy,
             uint currentItemId,
@@ -234,7 +80,7 @@ namespace ScrollToInSolutionExplorer
             if (hResult == VSConstants.S_OK && nestedHeirarchyPtr != IntPtr.Zero)
             {
                 if (Marshal.GetObjectForIUnknown(nestedHeirarchyPtr) is IVsHierarchy nestedHierarchy &&
-                    IsDisplayNamenHierarcy(targetDisplayName, nestedHierarchy, nestedItemId, currentLevel, currentNodes))
+                    IsDisplayNameInHierarcy(targetDisplayName, nestedHierarchy, nestedItemId, currentLevel, currentNodes))
                     return true;
             }
             else
@@ -243,8 +89,8 @@ namespace ScrollToInSolutionExplorer
                 currentHierarchy.GetCanonicalName(currentItemId, out var cononicalName);
                 currentHierarchy.GetProperty(currentItemId, (int)VSID.VSHPROPID_Name, out var displayName);
                 var nodeData = new HierarchyNodeData(cononicalName, (string)displayName);
-                Debug.WriteLine($"INFO: {nodeData}");
                 currentNodes.Add(nodeData);
+                //Debug.WriteLine($"INFO: {nodeData}");
 
                 //If we find match, terminate node enumerating
                 var lastNode = currentNodes.Last();
@@ -264,7 +110,7 @@ namespace ScrollToInSolutionExplorer
                     var childId = GetItemId(pFirstChildId);
                     while (childId != VSConstants.VSITEMID_NIL)
                     {
-                        var found = IsDisplayNamenHierarcy(targetDisplayName, currentHierarchy, childId, currentLevel, currentNodes);
+                        var found = IsDisplayNameInHierarcy(targetDisplayName, currentHierarchy, childId, currentLevel, currentNodes);
                         if (found)
                             return true;
 

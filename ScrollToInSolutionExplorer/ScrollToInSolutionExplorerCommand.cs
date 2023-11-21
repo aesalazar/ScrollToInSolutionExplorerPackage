@@ -118,16 +118,56 @@ namespace ScrollToInSolutionExplorer
         /// Attempts to locate the current active document in Solution Explorer and select it.
         /// </summary>
         /// <remarks>
-        /// Seems more repliable when dispatched to a new task especially when mapped to a tool bar button.
+        /// Seems more reliable when dispatched to a new task especially when mapped to a tool bar button.
         /// </remarks>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "ExecuteTaskToUiThread dispatches to the UI Thread")]
         private void OnMenuCommandInvoke(object _, EventArgs __)
+        {
+            ExecuteTaskToUiThread(() =>
+                _visualStudioInstance.DTE.ExecuteCommand("SolutionExplorer.SyncWithActiveDocument")
+            );
+        }
+
+        /// <summary>
+        /// Determines if the command should enabled or not based on current active document.
+        /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "ExecuteTaskToUiThread dispatches to the UI Thread")]
+        private void OnMenuCommandBeforeQueryStatus(object _, EventArgs __)
+        {
+            ExecuteTaskToUiThread(() =>
+            {
+                try
+                {
+                    var visibleName = _visualStudioInstance.ActiveWindow.Project?.Name ?? _visualStudioInstance.ActiveWindow.Caption;
+                    _command.Enabled = visibleName is string name && SolutionExplorerHelpers.IsDisplayNameInHierarcy(_vsSolutionHierarchy, name);
+                    Debug.WriteLine($"INFO: display name '{_visualStudioInstance.ActiveWindow.Project?.Name} - {_visualStudioInstance.ActiveWindow.Caption}' present: {_command.Enabled}");
+                }
+                catch (ArgumentException)
+                {
+                    _command.Enabled = false;
+                }
+                catch (Exception ex)
+                {
+                    if (ErrorHandler.IsCriticalException(ex))
+                        throw;
+
+                    _command.Enabled = false;
+                }
+            });
+        }
+
+        /// <summary>
+        /// Dispatches a call to the Main UI Thread with proper disposal reference.
+        /// </summary>
+        /// <param name="taskAction">Action to invoke inside the dispatch.</param>
+        private void ExecuteTaskToUiThread(Action taskAction)
         {
             _ = Task.Factory.StartNew(async () =>
             {
                 try
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(_disposalToken);
-                    _visualStudioInstance.DTE.ExecuteCommand("SolutionExplorer.SyncWithActiveDocument");
+                    taskAction.Invoke();
                 }
                 catch (Exception ex)
                 {
@@ -135,38 +175,6 @@ namespace ScrollToInSolutionExplorer
                         throw;
                 }
             }, _disposalToken, TaskCreationOptions.None, TaskScheduler.Default);
-        }
-
-        /// <summary>
-        /// Determines if the command should enabled or not based on current active document.
-        /// </summary>
-        /// <remarks>
-        /// This cannot be async as the commands will not enable/disable in time in the UI.
-        /// </remarks>
-        private void OnMenuCommandBeforeQueryStatus(object _, EventArgs __)
-        {
-            try
-            {
-                ThreadHelper.ThrowIfNotOnUIThread();
-                _command.Enabled = SolutionExplorerHelpers.IsDisplayNameInHierarcy(
-                    _vsSolutionHierarchy
-                    , _visualStudioInstance.ActiveWindow.Caption
-                );
-
-                Debug.WriteLine($"INFO: display name '{_visualStudioInstance.ActiveWindow.Caption}' present: {_command.Enabled}");
-            }
-            catch (ArgumentException)
-            {
-                //Unsupported file type, e.g. Project Properties tab
-                _command.Enabled = false;
-            }
-            catch (Exception ex)
-            {
-                if (ErrorHandler.IsCriticalException(ex))
-                    throw;
-
-                _command.Enabled = false;
-            }
         }
 
         #endregion
