@@ -51,8 +51,10 @@ namespace ScrollToInSolutionExplorer
         /// </remarks>
         protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
         {
+            progress.Report(new ServiceProgressData("Initializing Scroll To In Solution Explorer..."));
             await JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-            await ScrollToInSolutionExplorerCommand.InitializeAsync(this);
+            await ScrollToInSolutionExplorerCommand.InitializeAsync(this, progress);
+            progress.Report(new ServiceProgressData("Initializing Scroll To In Solution Explorer complete."));
         }
 
         #endregion

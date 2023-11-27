@@ -31,19 +31,23 @@ namespace ScrollToInSolutionExplorer
         /// <remarks>
         /// Call to AddCommand in ScrollToInSolutionExplorerCommand's constructor requires the UI thread.
         /// </remarks>
-        public static async Task InitializeAsync(AsyncPackage package)
+        public static async Task InitializeAsync(AsyncPackage package, IProgress<ServiceProgressData> progress)
         {
             //Perform all async now so command can run synchronously
+            progress.Report(new ServiceProgressData("Gathering components..."));
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
             var commandService = (OleMenuCommandService)await package.GetServiceAsync(typeof(IMenuCommandService));
             var applicationObject = (DTE2)await package.GetServiceAsync(typeof(_DTE));
             var vsSolutionHierarchy = (IVsHierarchy)await package.GetServiceAsync(typeof(SVsSolution));
 
-            Instance = new ScrollToInSolutionExplorerCommand(
+            progress.Report(new ServiceProgressData("Generating static instance..."));
+            var command = new ScrollToInSolutionExplorerCommand(
                 package.DisposalToken,
                 commandService,
                 applicationObject,
                 vsSolutionHierarchy);
+
+            progress.Report(new ServiceProgressData("Scroll To In Solution Explorer command initialized."));
         }
 
         #endregion
@@ -123,51 +127,12 @@ namespace ScrollToInSolutionExplorer
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "ExecuteTaskToUiThread dispatches to the UI Thread")]
         private void OnMenuCommandInvoke(object _, EventArgs __)
         {
-            ExecuteTaskToUiThread(() =>
-                _visualStudioInstance.DTE.ExecuteCommand("SolutionExplorer.SyncWithActiveDocument")
-            );
-        }
-
-        /// <summary>
-        /// Determines if the command should enabled or not based on current active document.
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "ExecuteTaskToUiThread dispatches to the UI Thread")]
-        private void OnMenuCommandBeforeQueryStatus(object _, EventArgs __)
-        {
-            ExecuteTaskToUiThread(() =>
-            {
-                try
-                {
-                    var visibleName = _visualStudioInstance.ActiveWindow.Project?.Name ?? _visualStudioInstance.ActiveWindow.Caption;
-                    _command.Enabled = visibleName is string name && SolutionExplorerHelpers.IsDisplayNameInHierarcy(_vsSolutionHierarchy, name);
-                    Debug.WriteLine($"INFO: display name '{_visualStudioInstance.ActiveWindow.Project?.Name} - {_visualStudioInstance.ActiveWindow.Caption}' present: {_command.Enabled}");
-                }
-                catch (ArgumentException)
-                {
-                    _command.Enabled = false;
-                }
-                catch (Exception ex)
-                {
-                    if (ErrorHandler.IsCriticalException(ex))
-                        throw;
-
-                    _command.Enabled = false;
-                }
-            });
-        }
-
-        /// <summary>
-        /// Dispatches a call to the Main UI Thread with proper disposal reference.
-        /// </summary>
-        /// <param name="taskAction">Action to invoke inside the dispatch.</param>
-        private void ExecuteTaskToUiThread(Action taskAction)
-        {
             _ = Task.Factory.StartNew(async () =>
             {
                 try
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(_disposalToken);
-                    taskAction.Invoke();
+                    _visualStudioInstance.DTE.ExecuteCommand("SolutionExplorer.SyncWithActiveDocument");
                 }
                 catch (Exception ex)
                 {
@@ -175,6 +140,38 @@ namespace ScrollToInSolutionExplorer
                         throw;
                 }
             }, _disposalToken, TaskCreationOptions.None, TaskScheduler.Default);
+        }
+
+        /// <summary>
+        /// Determines if the command should enabled or not based on current active document.
+        /// </summary>
+        /// <remarks>
+        /// This cannot be dispatched in any way via a dispatcher or a new Task.  If the user has selected 
+        /// a tab that is not selectable in Solution Explorer and then directly right-clicks on a file 
+        /// that is, the icon in the context menu will not light up.  Seems the check in this method must 
+        /// run synchronously so it sets the <see cref="MenuCommand.Enabled"/> before the context menu
+        /// is rendered.
+        /// </remarks>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "ExecuteTaskToUiThread dispatches to the UI Thread")]
+        private void OnMenuCommandBeforeQueryStatus(object _, EventArgs __)
+        {
+            try
+            {
+                var visibleName = _visualStudioInstance.ActiveWindow.Project?.Name ?? _visualStudioInstance.ActiveWindow.Caption;
+                _command.Enabled = visibleName is string name && SolutionExplorerHelpers.IsDisplayNameInHierarcy(_vsSolutionHierarchy, name);
+                Debug.WriteLine($"INFO: display name '{_visualStudioInstance.ActiveWindow.Project?.Name} - {_visualStudioInstance.ActiveWindow.Caption}' present: {_command.Enabled}");
+            }
+            catch (ArgumentException)
+            {
+                _command.Enabled = false;
+            }
+            catch (Exception ex)
+            {
+                if (ErrorHandler.IsCriticalException(ex))
+                    throw;
+
+                _command.Enabled = false;
+            }
         }
 
         #endregion
