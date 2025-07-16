@@ -1,4 +1,5 @@
 ﻿#nullable enable
+
 using System;
 using System.ComponentModel.Design;
 using System.Diagnostics;
@@ -9,6 +10,7 @@ using EnvDTE80;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using Constants = ScrollToInSolutionExplorer.Helpers.Constants;
 
 namespace ScrollToInSolutionExplorer
 {
@@ -28,6 +30,7 @@ namespace ScrollToInSolutionExplorer
         /// Initializes the singleton instance of the command that is registered with the command service.
         /// </summary>
         /// <param name="package">Owner package, not null.</param>
+        /// <param name="progress">Progress indicator to update.</param>
         /// <remarks>
         /// Call to AddCommand in ScrollToInSolutionExplorerCommand's constructor requires the UI thread.
         /// </remarks>
@@ -36,12 +39,12 @@ namespace ScrollToInSolutionExplorer
             //Perform all async now so command can run synchronously
             progress.Report(new ServiceProgressData("Gathering components..."));
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
-            var commandService = (OleMenuCommandService)await package.GetServiceAsync(typeof(IMenuCommandService));
-            var applicationObject = (DTE2)await package.GetServiceAsync(typeof(_DTE));
-            var vsSolutionHierarchy = (IVsHierarchy)await package.GetServiceAsync(typeof(SVsSolution));
+            var commandService = await package.GetServiceAsync<IMenuCommandService, OleMenuCommandService>(package.DisposalToken);
+            var applicationObject = await package.GetServiceAsync<_DTE, DTE2 >(package.DisposalToken);
+            var vsSolutionHierarchy = await package.GetServiceAsync<SVsSolution, IVsHierarchy>(package.DisposalToken);
 
             progress.Report(new ServiceProgressData("Generating static instance..."));
-            var command = new ScrollToInSolutionExplorerCommand(
+            Instance = new ScrollToInSolutionExplorerCommand(
                 package.DisposalToken,
                 commandService,
                 applicationObject,
@@ -58,9 +61,10 @@ namespace ScrollToInSolutionExplorer
         /// Initializes a new instance of the <see cref="ScrollToInSolutionExplorerCommand"/> class.
         /// Adds our command handlers for menu (commands must exist in the command table file)
         /// </summary>
+        /// <param name="disposalToken">Package disposal token.</param>
         /// <param name="commandService">Command service to add command to, not null.</param>
         /// <param name="visualStudioInstance">Reference to the Visual Studio instance.</param>
-        /// <param name="vsSolutionHierarchy">Reference to the Visual Stuio root hierarchy.</param>
+        /// <param name="vsSolutionHierarchy">Reference to the Visual Studio root hierarchy.</param>
         private ScrollToInSolutionExplorerCommand(
             CancellationToken disposalToken,
             OleMenuCommandService commandService,
@@ -125,7 +129,7 @@ namespace ScrollToInSolutionExplorer
         /// Seems more reliable when dispatched to a new task especially when mapped to a tool bar button.
         /// </remarks>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "ExecuteTaskToUiThread dispatches to the UI Thread")]
-        private void OnMenuCommandInvoke(object _, EventArgs __)
+        private void OnMenuCommandInvoke(object __, EventArgs ___)
         {
             _ = Task.Factory.StartNew(async () =>
             {
