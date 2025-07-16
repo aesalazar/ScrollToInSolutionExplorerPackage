@@ -132,7 +132,7 @@ namespace ScrollToInSolutionExplorer
                 try
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(_disposalToken);
-                    _visualStudioInstance.DTE.ExecuteCommand("SolutionExplorer.SyncWithActiveDocument");
+                    _visualStudioInstance.DTE.ExecuteCommand(Constants.SyncWithActiveDocumentCommand);
                 }
                 catch (Exception ex)
                 {
