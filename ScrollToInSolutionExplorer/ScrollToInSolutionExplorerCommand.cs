@@ -1,15 +1,12 @@
-﻿#nullable enable
-
-using System;
+﻿using System;
 using System.ComponentModel.Design;
-using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Shell.Interop;
 using Constants = ScrollToInSolutionExplorer.Helpers.Constants;
 
 namespace ScrollToInSolutionExplorer
@@ -19,6 +16,34 @@ namespace ScrollToInSolutionExplorer
     /// </summary>
     internal sealed class ScrollToInSolutionExplorerCommand
     {
+        #region Constructor
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ScrollToInSolutionExplorerCommand"/> class.
+        /// Adds our command handlers for menu (commands must exist in the command table file)
+        /// </summary>
+        /// <param name="disposalToken">Package disposal token.</param>
+        /// <param name="commandService">Command service to add command to, not null.</param>
+        /// <param name="visualStudioInstance">Reference to the Visual Studio instance.</param>
+        private ScrollToInSolutionExplorerCommand(
+            CancellationToken disposalToken,
+            OleMenuCommandService commandService,
+            DTE2 visualStudioInstance)
+        {
+            _disposalToken = disposalToken;
+            _visualStudioInstance = visualStudioInstance;
+
+            _command = new OleMenuCommand(
+                OnMenuCommandInvoke,
+                null,
+                OnMenuCommandBeforeQueryStatus,
+                new CommandID(CommandSet, CommandId));
+
+            commandService.AddCommand(_command);
+        }
+
+        #endregion
+
         #region Public Statics
 
         /// <summary>
@@ -40,48 +65,15 @@ namespace ScrollToInSolutionExplorer
             progress.Report(new ServiceProgressData("Gathering components..."));
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(package.DisposalToken);
             var commandService = await package.GetServiceAsync<IMenuCommandService, OleMenuCommandService>(package.DisposalToken);
-            var applicationObject = await package.GetServiceAsync<_DTE, DTE2 >(package.DisposalToken);
-            var vsSolutionHierarchy = await package.GetServiceAsync<SVsSolution, IVsHierarchy>(package.DisposalToken);
+            var applicationObject = await package.GetServiceAsync<_DTE, DTE2>(package.DisposalToken);
 
             progress.Report(new ServiceProgressData("Generating static instance..."));
             Instance = new ScrollToInSolutionExplorerCommand(
                 package.DisposalToken,
                 commandService,
-                applicationObject,
-                vsSolutionHierarchy);
+                applicationObject);
 
             progress.Report(new ServiceProgressData("Scroll To In Solution Explorer command initialized."));
-        }
-
-        #endregion
-
-        #region Constructor
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ScrollToInSolutionExplorerCommand"/> class.
-        /// Adds our command handlers for menu (commands must exist in the command table file)
-        /// </summary>
-        /// <param name="disposalToken">Package disposal token.</param>
-        /// <param name="commandService">Command service to add command to, not null.</param>
-        /// <param name="visualStudioInstance">Reference to the Visual Studio instance.</param>
-        /// <param name="vsSolutionHierarchy">Reference to the Visual Studio root hierarchy.</param>
-        private ScrollToInSolutionExplorerCommand(
-            CancellationToken disposalToken,
-            OleMenuCommandService commandService,
-            DTE2 visualStudioInstance,
-            IVsHierarchy vsSolutionHierarchy)
-        {
-            _disposalToken = disposalToken;
-            _visualStudioInstance = visualStudioInstance;
-            _vsSolutionHierarchy = vsSolutionHierarchy;
-
-            _command = new OleMenuCommand(
-                OnMenuCommandInvoke,
-                null,
-                OnMenuCommandBeforeQueryStatus,
-                new CommandID(CommandSet, CommandId));
-
-            commandService.AddCommand(_command);
         }
 
         #endregion
@@ -96,7 +88,7 @@ namespace ScrollToInSolutionExplorer
         /// <summary>
         /// Command menu group (command set GUID).
         /// </summary>
-        private static readonly Guid CommandSet = new Guid("d41f8793-ad72-4ed1-af0f-cec3de2b9a61");
+        private static readonly Guid CommandSet = new("d41f8793-ad72-4ed1-af0f-cec3de2b9a61");
 
         /// <summary>
         /// Regisered Command
@@ -113,11 +105,6 @@ namespace ScrollToInSolutionExplorer
         /// </summary>
         private readonly DTE2 _visualStudioInstance;
 
-        /// <summary>
-        /// Reference to the Visual Stuio root hierarchy.
-        /// </summary>
-        private readonly IVsHierarchy _vsSolutionHierarchy;
-
         #endregion
 
         #region Methods
@@ -126,9 +113,9 @@ namespace ScrollToInSolutionExplorer
         /// Attempts to locate the current active document in Solution Explorer and select it.
         /// </summary>
         /// <remarks>
-        /// Seems more reliable when dispatched to a new task especially when mapped to a tool bar button.
+        /// Seems more reliable when dispatched to a new task especially when mapped to a toolbar button.
         /// </remarks>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "ExecuteTaskToUiThread dispatches to the UI Thread")]
+        [SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "ExecuteTaskToUiThread dispatches to the UI Thread")]
         private void OnMenuCommandInvoke(object __, EventArgs ___)
         {
             _ = Task.Factory.StartNew(async () =>
@@ -136,7 +123,9 @@ namespace ScrollToInSolutionExplorer
                 try
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(_disposalToken);
-                    _visualStudioInstance.DTE.ExecuteCommand(Constants.SyncWithActiveDocumentCommand);
+                    _visualStudioInstance
+                        .DTE
+                        .ExecuteCommand(Constants.SyncWithActiveDocumentCommand);
                 }
                 catch (Exception ex)
                 {
@@ -147,7 +136,7 @@ namespace ScrollToInSolutionExplorer
         }
 
         /// <summary>
-        /// Determines if the command should enabled or not based on current active document.
+        /// Determines if the command should be enabled or not based on current active document.
         /// </summary>
         /// <remarks>
         /// This cannot be dispatched in any way via a dispatcher or a new Task.  If the user has selected 
@@ -156,14 +145,16 @@ namespace ScrollToInSolutionExplorer
         /// run synchronously so it sets the <see cref="MenuCommand.Enabled"/> before the context menu
         /// is rendered.
         /// </remarks>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "ExecuteTaskToUiThread dispatches to the UI Thread")]
+        [SuppressMessage("Usage", "VSTHRD010:Invoke single-threaded types on Main thread", Justification = "ExecuteTaskToUiThread dispatches to the UI Thread")]
         private void OnMenuCommandBeforeQueryStatus(object _, EventArgs __)
         {
             try
             {
-                var visibleName = _visualStudioInstance.ActiveWindow.Project?.Name ?? _visualStudioInstance.ActiveWindow.Caption;
-                _command.Enabled = visibleName is string name && SolutionExplorerHelpers.IsDisplayNameInHierarcy(_vsSolutionHierarchy, name);
-                Debug.WriteLine($"INFO: display name '{_visualStudioInstance.ActiveWindow.Project?.Name} - {_visualStudioInstance.ActiveWindow.Caption}' present: {_command.Enabled}");
+                _command.Enabled = _visualStudioInstance
+                    .DTE
+                    .Commands
+                    .Item(Constants.SyncWithActiveDocumentCommand)
+                    .IsAvailable;
             }
             catch (ArgumentException)
             {
