@@ -5,7 +5,7 @@
     /// </summary>
     internal static class Constants
     {
-        // <summary>
+        /// <summary>
         /// VS Command to locate and select the active document in Solution Explorer.
         /// </summary>
         public const string SyncWithActiveDocumentCommand = "SolutionExplorer.SyncWithActiveDocument";

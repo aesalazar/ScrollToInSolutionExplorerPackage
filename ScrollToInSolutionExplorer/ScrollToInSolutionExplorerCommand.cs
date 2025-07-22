@@ -7,12 +7,13 @@ using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
+using ScrollToInSolutionExplorer.Helpers;
 using Constants = ScrollToInSolutionExplorer.Helpers.Constants;
 
 namespace ScrollToInSolutionExplorer
 {
     /// <summary>
-    /// Command handler
+    /// Creates and registers the Commands used by the Menus and Toolbar.
     /// </summary>
     internal sealed class ScrollToInSolutionExplorerCommand
     {
@@ -33,23 +34,30 @@ namespace ScrollToInSolutionExplorer
             _disposalToken = disposalToken;
             _visualStudioInstance = visualStudioInstance;
 
-            _command = new OleMenuCommand(
+            _menuCommand = new OleMenuCommand(
                 OnMenuCommandInvoke,
                 null,
                 OnMenuCommandBeforeQueryStatus,
-                new CommandID(CommandSet, CommandId));
+                new CommandID(
+                    PackageGuids.GuidScrollToInSolutionExplorerPackageCmdSet,
+                    PackageIds.ScrollToInSolutionExplorerMenuCommandId));
 
-            commandService.AddCommand(_command);
+            commandService.AddCommand(_menuCommand);
+
+            _toolbarCommand = new OleMenuCommand(
+                OnMenuCommandInvoke,
+                null,
+                OnMenuCommandBeforeQueryStatus,
+                new CommandID(
+                    PackageGuids.GuidScrollToInSolutionExplorerPackageCmdSet,
+                    PackageIds.ScrollToInSolutionExplorerToolbarCommandId));
+
+            commandService.AddCommand(_toolbarCommand);
         }
 
         #endregion
 
         #region Public Statics
-
-        /// <summary>
-        /// Gets the instance of the command.
-        /// </summary>
-        public static ScrollToInSolutionExplorerCommand? Instance { get; private set; }
 
         /// <summary>
         /// Initializes the singleton instance of the command that is registered with the command service.
@@ -59,7 +67,7 @@ namespace ScrollToInSolutionExplorer
         /// <remarks>
         /// Call to AddCommand in ScrollToInSolutionExplorerCommand's constructor requires the UI thread.
         /// </remarks>
-        public static async Task InitializeAsync(AsyncPackage package, IProgress<ServiceProgressData> progress)
+        public static async Task<ScrollToInSolutionExplorerCommand> InitializeAsync(AsyncPackage package, IProgress<ServiceProgressData> progress)
         {
             //Perform all async now so command can run synchronously
             progress.Report(new ServiceProgressData("Gathering components..."));
@@ -68,12 +76,13 @@ namespace ScrollToInSolutionExplorer
             var applicationObject = await package.GetServiceAsync<_DTE, DTE2>(package.DisposalToken);
 
             progress.Report(new ServiceProgressData("Generating static instance..."));
-            Instance = new ScrollToInSolutionExplorerCommand(
+            var command = new ScrollToInSolutionExplorerCommand(
                 package.DisposalToken,
                 commandService,
                 applicationObject);
 
             progress.Report(new ServiceProgressData("Scroll To In Solution Explorer command initialized."));
+            return command;
         }
 
         #endregion
@@ -81,19 +90,11 @@ namespace ScrollToInSolutionExplorer
         #region Fields
 
         /// <summary>
-        /// Command ID.
-        /// </summary>
-        private const int CommandId = 0x0100;
-
-        /// <summary>
-        /// Command menu group (command set GUID).
-        /// </summary>
-        private static readonly Guid CommandSet = new("d41f8793-ad72-4ed1-af0f-cec3de2b9a61");
-
-        /// <summary>
         /// Regisered Command
         /// </summary>
-        private readonly OleMenuCommand _command;
+        private readonly OleMenuCommand _menuCommand;
+
+        private readonly OleMenuCommand _toolbarCommand;
 
         /// <summary>
         /// Package disposal token.
@@ -150,22 +151,25 @@ namespace ScrollToInSolutionExplorer
         {
             try
             {
-                _command.Enabled = _visualStudioInstance
+                var isEnabled = _visualStudioInstance
                     .DTE
                     .Commands
                     .Item(Constants.SyncWithActiveDocumentCommand)
                     .IsAvailable;
+
+                _menuCommand.Enabled = isEnabled;
+                _toolbarCommand.Enabled = isEnabled;
             }
             catch (ArgumentException)
             {
-                _command.Enabled = false;
+                _menuCommand.Enabled = false;
             }
             catch (Exception ex)
             {
                 if (ErrorHandler.IsCriticalException(ex))
                     throw;
 
-                _command.Enabled = false;
+                _menuCommand.Enabled = false;
             }
         }
 

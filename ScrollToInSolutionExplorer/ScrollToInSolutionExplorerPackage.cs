@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using ScrollToInSolutionExplorer.Helpers;
 using Task = System.Threading.Tasks.Task;
 
 namespace ScrollToInSolutionExplorer
@@ -25,16 +26,11 @@ namespace ScrollToInSolutionExplorer
     /// </para>
     /// </remarks>
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
-    [Guid(PackageGuidString)]
+    [Guid(PackageGuids.GuidScrollToInSolutionExplorerPackageString)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
     [ProvideAutoLoad(UIContextGuids80.SolutionExists, PackageAutoLoadFlags.BackgroundLoad)]
     public sealed class ScrollToInSolutionExplorerPackage : AsyncPackage
     {
-        /// <summary>
-        /// ScrollToInSolutionExplorerPackage GUID string.
-        /// </summary>
-        public const string PackageGuidString = "ba7408f0-ed7d-4efa-85ef-2d648b9a3274";
-
         #region Package Members
 
         /// <summary>
