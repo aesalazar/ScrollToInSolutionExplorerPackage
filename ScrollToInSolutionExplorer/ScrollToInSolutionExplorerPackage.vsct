@@ -74,8 +74,8 @@
 				id="ScrollToInSolutionExplorerToolbar"
 				type="Toolbar">
 				<Strings>
-					<ButtonText>Scroll Tools</ButtonText>
-					<CommandName>Scroll Tools</CommandName>
+					<ButtonText>Scrolling Tools</ButtonText>
+					<CommandName>Scrolling Tools</CommandName>
 				</Strings>
 			</Menu>
 		</Menus>

@@ -48,7 +48,7 @@ namespace ScrollToInSolutionExplorer
         {
             progress.Report(new ServiceProgressData("Initializing Scroll To In Solution Explorer..."));
             await JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-            await ScrollToInSolutionExplorerCommand.InitializeAsync(this, progress);
+            await ScrollToInSolutionExplorerCommandManager.InitializeAsync(this, progress);
             progress.Report(new ServiceProgressData("Initializing Scroll To In Solution Explorer complete."));
         }
 
