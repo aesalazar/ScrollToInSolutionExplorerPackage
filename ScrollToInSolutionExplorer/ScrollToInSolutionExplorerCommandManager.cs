@@ -1,14 +1,12 @@
 ﻿using System;
 using System.ComponentModel.Design;
 using System.Diagnostics.CodeAnalysis;
-using System.Threading;
 using System.Threading.Tasks;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using ScrollToInSolutionExplorer.Helpers;
-using Constants = ScrollToInSolutionExplorer.Helpers.Constants;
 
 namespace ScrollToInSolutionExplorer;
 
@@ -22,15 +20,15 @@ internal sealed class ScrollToInSolutionExplorerCommandManager
     /// <summary>
     /// Initializes a new instance of the class.
     /// </summary>
-    /// <param name="disposalToken">Package disposal token.</param>
+    /// <param name="package">Parent Package.</param>
     /// <param name="commandService">Command service to add command to, not null.</param>
     /// <param name="visualStudioInstance">Reference to the Visual Studio instance.</param>
     private ScrollToInSolutionExplorerCommandManager(
-        CancellationToken disposalToken,
+        AsyncPackage package,
         OleMenuCommandService commandService,
         DTE2 visualStudioInstance)
     {
-        _disposalToken = disposalToken;
+        _package = package;
         _visualStudioInstance = visualStudioInstance;
 
         _menuCommand = new OleMenuCommand(
@@ -42,6 +40,16 @@ internal sealed class ScrollToInSolutionExplorerCommandManager
                 PackageIds.ScrollToInSolutionExplorerMenuCommandId));
 
         commandService.AddCommand(_menuCommand);
+
+        _tabMenuCommand = new OleMenuCommand(
+            OnCommandInvoke,
+            null,
+            OnCommandBeforeQueryStatus,
+            new CommandID(
+                PackageGuids.GuidScrollToInSolutionExplorerPackageCmdSet,
+                PackageIds.ScrollToInSolutionExplorerDocumentTabCommandId));
+
+        commandService.AddCommand(_tabMenuCommand);
 
         _toolbarCommand = new OleMenuCommand(
             OnCommandInvoke,
@@ -75,7 +83,7 @@ internal sealed class ScrollToInSolutionExplorerCommandManager
 
         progress.Report(new ServiceProgressData("Generating static instance..."));
         var manager = new ScrollToInSolutionExplorerCommandManager(
-            package.DisposalToken,
+            package,
             commandService,
             applicationObject);
 
@@ -93,14 +101,19 @@ internal sealed class ScrollToInSolutionExplorerCommandManager
     private readonly OleMenuCommand _menuCommand;
 
     /// <summary>
+    /// Registered command for the Document Tab Menu.
+    /// </summary>
+    private readonly OleMenuCommand _tabMenuCommand;
+
+    /// <summary>
     /// Registered command for the custom Toolbar.
     /// </summary>
     private readonly OleMenuCommand _toolbarCommand;
 
     /// <summary>
-    /// Package disposal token.
+    /// Parent Package.
     /// </summary>
-    private readonly CancellationToken _disposalToken;
+    private readonly AsyncPackage _package;
 
     /// <summary>
     /// Reference to Visual Studio.
@@ -110,6 +123,19 @@ internal sealed class ScrollToInSolutionExplorerCommandManager
     #endregion
 
     #region Methods
+
+    /// <summary>
+    /// Updates state of UI controls based on the latest options.
+    /// </summary>
+    /// <param name="optionsPage">Use-specified option settings.</param>
+    public void ApplyUserSettings(ScrollToInSolutionExplorerOptionsPage optionsPage)
+    {
+        _menuCommand.Visible = optionsPage.IsVisibleInToolMenu;
+        _menuCommand.Supported = optionsPage.IsVisibleInToolMenu;
+
+        _tabMenuCommand.Visible = optionsPage.IsVisibleInDocumentTabMenu;
+        _tabMenuCommand.Supported = optionsPage.IsVisibleInDocumentTabMenu;
+    }
 
     /// <summary>
     /// Attempts to locate the current active document in Solution Explorer and select it.
@@ -124,17 +150,17 @@ internal sealed class ScrollToInSolutionExplorerCommandManager
         {
             try
             {
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(_disposalToken);
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(_package.DisposalToken);
                 _visualStudioInstance
                     .DTE
-                    .ExecuteCommand(Constants.SyncWithActiveDocumentCommand);
+                    .ExecuteCommand(GeneralConstants.SyncWithActiveDocumentCommand);
             }
             catch (Exception ex)
             {
                 if (ErrorHandler.IsCriticalException(ex))
                     throw;
             }
-        }, _disposalToken, TaskCreationOptions.None, TaskScheduler.Default);
+        }, _package.DisposalToken, TaskCreationOptions.None, TaskScheduler.Default);
     }
 
     /// <summary>
@@ -155,15 +181,18 @@ internal sealed class ScrollToInSolutionExplorerCommandManager
             var isEnabled = _visualStudioInstance
                 .DTE
                 .Commands
-                .Item(Constants.SyncWithActiveDocumentCommand)
+                .Item(GeneralConstants.SyncWithActiveDocumentCommand)
                 .IsAvailable;
 
             _menuCommand.Enabled = isEnabled;
             _toolbarCommand.Enabled = isEnabled;
+            _tabMenuCommand.Enabled = isEnabled;
         }
         catch (ArgumentException)
         {
             _menuCommand.Enabled = false;
+            _tabMenuCommand.Enabled = false;
+            _toolbarCommand.Enabled = false;
         }
         catch (Exception ex)
         {
@@ -171,6 +200,8 @@ internal sealed class ScrollToInSolutionExplorerCommandManager
                 throw;
 
             _menuCommand.Enabled = false;
+            _tabMenuCommand.Enabled = false;
+            _toolbarCommand.Enabled = false;
         }
     }
 

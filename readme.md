@@ -1,13 +1,9 @@
-# Scroll To in Visual Studio Solution Explorer Extension (VSIX)
+# Scroll To in Visual Studio Solution Explorer Extension (VSIX) for Visual Studio 2022
 
-## Market Place: https://aesalazar.github.io/AsteroidsWasm/
+## Market Place: TBD
 
-This project is a POC to determine the plausibility of writing a .NET Standard library and using it across devices INCLUDING WebAssembly (WASM).  The root library, Asteroids.Standard, encapsulates all logic for rendering the classic '80s video game.  None of this is meant to be production-worthy.  It is more me just messing around trying to see what works.
+I wanted something similar to Reshraper's ability to navigate to the file in Solution Explorer.  I normally run with syncing selection turned off so finding the file after moving around can be combersome.  This is a pretty simiple implementation that triggers the `SyncWithActiveDocument` command native to Visual Studio.
 
-<div style="text-align: center;">
-    <a href="Documents/Screeny.gif" target="_blank">
-        <img src="Documents/Screeny.gif" alt="Screen Shot" >
-    </a>  
-</div>
+By default, the icon will be added to the context ("right-click") menu of the Document Tabs (where applicable) and the Tools menu.  These options can be hidden via Tools > Options.  Also, a custom Toolbar "Scroll To In Solution Explorer" is avilable.
 
-The original code was adopted from a very cool WinForms project on CodePlex by Howard Uman, circa 2004:
+I welcome any comments, questions, or contributions.
