@@ -1,28 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
-	<Metadata>
-		<Identity Id="ScrollToInSolutionExplorer.31ac9553-84ba-47c0-a6bd-5762fb36e86b" Version="0.16" Language="en-US" Publisher="Ernie Salazar" />
-		<DisplayName>Scroll To In Solution Explorer</DisplayName>
-		<Description xml:space="preserve">A simple tool to quickly scroll to and select the current document tab in Solution Explorer.</Description>
-		<MoreInfo>https://github.com/aesalazar/ScrollToInSolutionExplorerPackage</MoreInfo>
-		<License>license.txt</License>
-		<Icon>Resources\ScrollToInSolutionExplorerCommand.ico</Icon>
-		<PreviewImage>Resources\ScrollToInSolutionExplorerCommand.ico</PreviewImage>
-		<Tags>solution explorer, navigation, productivity, scroll, document</Tags>
-		<Preview>true</Preview>
-	</Metadata>
-	<Installation>
-		<InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.0, 18.0)">
-			<ProductArchitecture>amd64</ProductArchitecture>
-		</InstallationTarget>
-	</Installation>
-	<Dependencies>
-		<Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" d:Source="Manual" Version="[4.5,)" />
-	</Dependencies>
-	<Prerequisites>
-		<Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[17.0,18.0)" DisplayName="Visual Studio core editor" />
-	</Prerequisites>
-	<Assets>
-		<Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />
-	</Assets>
+    <Metadata>
+        <Identity Id="ScrollToInSolutionExplorer.31ac9553-84ba-47c0-a6bd-5762fb36e86b" Version="0.17" Language="en-US" Publisher="Ernie Salazar" />
+        <DisplayName>Scroll To In Solution Explorer</DisplayName>
+        <Description xml:space="preserve">A simple tool to quickly scroll to and select the current document tab in Solution Explorer.  I created it because I prefer to run with "Sync with Active Document" turned off in Solution Explorer and finding the file manually can be very cumbersome.
+
+There are three options for placing the icon.  First is in the Visual Studio Tools menu.  Second is in the Context menus ("right-click menus") of each Document Tab being edited.  And third is in its own Toolbar.  Both the Tools menu and Document Tab Context menu options can be turned off via Tools - Options.  </Description>
+        <MoreInfo>https://github.com/aesalazar/ScrollToInSolutionExplorerPackage</MoreInfo>
+        <License>license.txt</License>
+        <Icon>Resources\ScrollToInSolutionExplorerCommand.ico</Icon>
+        <PreviewImage>Resources\ScrollToInSolutionExplorerCommand_512px.png</PreviewImage>
+        <Tags>solution explorer, navigation, productivity, scroll, document</Tags>
+        <Preview>true</Preview>
+    </Metadata>
+    <Installation>
+        <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.0, 18.0)">
+            <ProductArchitecture>amd64</ProductArchitecture>
+        </InstallationTarget>
+        <InstallationTarget Id="Microsoft.VisualStudio.Pro" Version="[17.0, 18.0)">
+            <ProductArchitecture>amd64</ProductArchitecture>
+        </InstallationTarget>
+        <InstallationTarget Id="Microsoft.VisualStudio.Enterprise" Version="[17.0, 18.0)">
+            <ProductArchitecture>amd64</ProductArchitecture>
+        </InstallationTarget>
+        <SupportedProducts>
+            <VisualStudio Version="17.0">
+                <Edition>Community</Edition>
+                <Edition>Professional</Edition>
+                <Edition>Enterprise</Edition>
+            </VisualStudio>
+        </SupportedProducts>
+    </Installation>
+    <Dependencies>
+        <Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" d:Source="Manual" Version="[4.5,)" />
+    </Dependencies>
+    <Prerequisites>
+        <Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[17.0,18.0)" DisplayName="Visual Studio core editor" />
+    </Prerequisites>
+    <Assets>
+        <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />
+    </Assets>
 </PackageManifest>

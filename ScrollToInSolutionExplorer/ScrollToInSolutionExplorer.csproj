@@ -110,6 +110,10 @@
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <Content Include="Resources\ScrollToInSolutionExplorerCommand.png" />
+    <Content Include="Resources\ScrollToInSolutionExplorerCommand_512px.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <Page Include="ScrollToInSolutionExplorerOptionsControl.xaml">

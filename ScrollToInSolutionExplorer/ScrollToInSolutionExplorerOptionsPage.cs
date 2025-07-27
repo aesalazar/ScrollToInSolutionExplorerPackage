@@ -13,6 +13,9 @@ namespace ScrollToInSolutionExplorer;
 /// </summary>
 internal sealed class ScrollToInSolutionExplorerOptionsPage : UIElementDialogPage
 {
+    public const string IsVisibleInToolMenuHeader = "Show in Visual Studio Tools Menu";
+    public const string IsVisibleInDocumentTabMenuHeader = "Show in Document Tab Context Menu";
+    
     private ScrollToInSolutionExplorerCommandManager? _commandManager;
     private ScrollToInSolutionExplorerOptionsControl? _optionsControl;
 
@@ -22,7 +25,7 @@ internal sealed class ScrollToInSolutionExplorerOptionsPage : UIElementDialogPag
     /// Indicates if the icon should be displayed in the Visual Studio Tool menu.
     /// </summary>
     [Category("Visibility")]
-    [DisplayName("Show in Visual Studio Tool Menu")]
+    [DisplayName(IsVisibleInToolMenuHeader)]
     [Browsable(true)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
     public bool IsVisibleInToolMenu { get; set; } = true;
@@ -31,7 +34,7 @@ internal sealed class ScrollToInSolutionExplorerOptionsPage : UIElementDialogPag
     /// Indicates if the icon should be displayed in the Document Tab context menu.
     /// </summary>
     [Category("Visibility")]
-    [DisplayName("Show in Document Tab Context Menu")]
+    [DisplayName(IsVisibleInDocumentTabMenuHeader)]
     [Browsable(true)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Visible)]
     public bool IsVisibleInDocumentTabMenu { get; set; } = true;

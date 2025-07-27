@@ -2,9 +2,11 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:ScrollToInSolutionExplorer"
+             mc:Ignorable="d" d:DesignHeight="200" d:DesignWidth="300"
+             d:Background="White"
+             >
     <StackPanel 
         Margin="10"
         >
@@ -19,12 +21,12 @@
             >
             <CheckBox 
                 x:Name="IsVisibleInToolMenu"
-                Content="Show in Visual Studio Tools Menu" 
+                Content="{x:Static local:ScrollToInSolutionExplorerOptionsPage.IsVisibleInToolMenuHeader}" 
                 Margin="0,5"
             />
             <CheckBox 
                 x:Name="IsVisibleInDocumentTabMenu" 
-                Content="Show in Document Tab Context Menu" 
+                Content="{x:Static local:ScrollToInSolutionExplorerOptionsPage.IsVisibleInDocumentTabMenuHeader}" 
                 Margin="0,5"
             />
         </StackPanel>
