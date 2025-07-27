@@ -9,7 +9,7 @@
     />
 </div>
 
-## Market Place: TBD
+## Visual Studio Marketplace: [Scroll To In Solution Explorer](https://marketplace.visualstudio.com/items?itemName=ErnieSalazar.ScrollToInSolutionExplorer)
 
 I wanted something similar to Reshraper's ability to navigate to the file in Solution Explorer.  I normally run with syncing selection turned off so finding the file after moving around can be combersome.  This is a pretty simiple implementation that triggers the `SyncWithActiveDocument` command native to Visual Studio.
 
