@@ -17,6 +17,8 @@ By default, the icon will be added to the Context ("right-click") menu of the Do
 
 I welcome any comments, questions, or contributions.
 
+NOTE: Visual Studio 2022 shipped with a default hotkey of `CTRL + [, S` for `SyncWIthActiveDocument` that still work fine with this extension installed.  I have attempted to get VS to show that combination next to the menu items added by this package but have not had much luck.  Best I have been able to do is get the keybinding on startup (it can be changed by the user) and add it as a string to the title.  I would prefer it show properly like other menu items with assigned keys but it may be a limitation of the VISX echosystem.
+
 <div style="text-align: center">
     <img 
         src="Documents/ScrollToInSolutionExplorer_Screenshot.png"
