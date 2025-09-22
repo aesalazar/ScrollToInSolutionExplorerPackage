@@ -14,17 +14,26 @@ There are three options for placing the icon.  First is in the Visual Studio Too
         <Preview>true</Preview>
     </Metadata>
     <Installation>
-        <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.0, 18.0)">
+        <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.0, 19.0)">
             <ProductArchitecture>amd64</ProductArchitecture>
         </InstallationTarget>
-        <InstallationTarget Id="Microsoft.VisualStudio.Pro" Version="[17.0, 18.0)">
+        <InstallationTarget Id="Microsoft.VisualStudio.Pro" Version="[17.0, 19.0)">
             <ProductArchitecture>amd64</ProductArchitecture>
-        </InstallationTarget>
-        <InstallationTarget Id="Microsoft.VisualStudio.Enterprise" Version="[17.0, 18.0)">
+		</InstallationTarget>
+	    <InstallationTarget Id="Microsoft.VisualStudio.Enterprise" Version="[17.0, 19.0)">
             <ProductArchitecture>amd64</ProductArchitecture>
+		</InstallationTarget>
+        <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.0, 19.0)">
+            <ProductArchitecture>arm64</ProductArchitecture>
         </InstallationTarget>
-        <SupportedProducts>
-            <VisualStudio Version="17.0">
+        <InstallationTarget Id="Microsoft.VisualStudio.Pro" Version="[17.0, 19.0)">
+			<ProductArchitecture>arm64</ProductArchitecture>
+		</InstallationTarget>
+	    <InstallationTarget Id="Microsoft.VisualStudio.Enterprise" Version="[17.0, 19.0)">
+			<ProductArchitecture>arm64</ProductArchitecture>
+		</InstallationTarget>
+	    <SupportedProducts>
+            <VisualStudio Version="[17.0, 19.0)">
                 <Edition>Community</Edition>
                 <Edition>Professional</Edition>
                 <Edition>Enterprise</Edition>
@@ -35,7 +44,7 @@ There are three options for placing the icon.  First is in the Visual Studio Too
         <Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" d:Source="Manual" Version="[4.5,)" />
     </Dependencies>
     <Prerequisites>
-        <Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[17.0,18.0)" DisplayName="Visual Studio core editor" />
+        <Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[17.0,19.0)" DisplayName="Visual Studio core editor" />
     </Prerequisites>
     <Assets>
         <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />
