@@ -1,4 +1,4 @@
-# Scroll To in Visual Studio Solution Explorer Extension (VSIX) for Visual Studio 2022
+# Scroll To in Visual Studio Solution Explorer Extension (VSIX) for Visual Studio 2022 and 2026
 
 <div style="text-align: center">
     <img 
