@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
-        <Identity Id="ScrollToInSolutionExplorer.31ac9553-84ba-47c0-a6bd-5762fb36e86b" Version="1.00" Language="en-US" Publisher="Ernie Salazar" />
+        <Identity Id="ScrollToInSolutionExplorer.31ac9553-84ba-47c0-a6bd-5762fb36e86b" Version="1.1.0" Language="en-US" Publisher="Ernie Salazar" />
         <DisplayName>Scroll To In Solution Explorer</DisplayName>
         <Description xml:space="preserve">A simple tool to quickly scroll to and select the current document tab in Solution Explorer.  I created it because I prefer to run with "Sync with Active Document" turned off in Solution Explorer and finding the file manually can be very cumbersome.
 
@@ -13,26 +13,26 @@ There are three options for placing the icon.  First is in the Visual Studio Too
         <Tags>solution explorer, navigation, productivity, scroll, document</Tags>
     </Metadata>
     <Installation>
-        <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.0, 19.0)">
+        <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.0, 20.0)">
             <ProductArchitecture>amd64</ProductArchitecture>
         </InstallationTarget>
-        <InstallationTarget Id="Microsoft.VisualStudio.Pro" Version="[17.0, 19.0)">
+        <InstallationTarget Id="Microsoft.VisualStudio.Pro" Version="[17.0, 20.0)">
             <ProductArchitecture>amd64</ProductArchitecture>
         </InstallationTarget>
-        <InstallationTarget Id="Microsoft.VisualStudio.Enterprise" Version="[17.0, 19.0)">
+        <InstallationTarget Id="Microsoft.VisualStudio.Enterprise" Version="[17.0, 20.0)">
             <ProductArchitecture>amd64</ProductArchitecture>
         </InstallationTarget>
-        <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.0, 19.0)">
+        <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.0, 20.0)">
             <ProductArchitecture>arm64</ProductArchitecture>
         </InstallationTarget>
-        <InstallationTarget Id="Microsoft.VisualStudio.Pro" Version="[17.0, 19.0)">
+        <InstallationTarget Id="Microsoft.VisualStudio.Pro" Version="[17.0, 20.0)">
             <ProductArchitecture>arm64</ProductArchitecture>
         </InstallationTarget>
-        <InstallationTarget Id="Microsoft.VisualStudio.Enterprise" Version="[17.0, 19.0)">
+        <InstallationTarget Id="Microsoft.VisualStudio.Enterprise" Version="[17.0, 20.0)">
             <ProductArchitecture>arm64</ProductArchitecture>
         </InstallationTarget>
         <SupportedProducts>
-            <VisualStudio Version="[17.0, 19.0)">
+            <VisualStudio Version="[17.0, 20.0)">
                 <Edition>Community</Edition>
                 <Edition>Professional</Edition>
                 <Edition>Enterprise</Edition>
